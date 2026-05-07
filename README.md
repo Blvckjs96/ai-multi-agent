@@ -139,8 +139,8 @@ ai_multi_agent/
 
 ## Demo Screenshot
 
-![Demo screenshot placeholder — add your own after running the app]
+
 
 ---
 
-*Portfolio project — AI Multi-Agent Pipeline*
+*AI Multi-Agent*
