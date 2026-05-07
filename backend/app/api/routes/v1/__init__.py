@@ -9,6 +9,7 @@ from app.api.routes.v1 import conversations
 from app.api.routes.v1 import admin_conversations
 from app.api.routes.v1 import agent
 from app.api.routes.v1 import files
+from app.api.routes.v1 import pipeline
 
 v1_router = APIRouter()
 
@@ -38,3 +39,6 @@ v1_router.include_router(files.router, tags=["files"])
 v1_router.include_router(
     admin_conversations.router, prefix="/admin/conversations", tags=["admin-conversations"]
 )
+
+# Pipeline (no auth — portfolio demo)
+v1_router.include_router(pipeline.router, tags=["pipeline"])

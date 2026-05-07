@@ -1,130 +1,146 @@
-# ai_multi_agent
+# AI Spec Generator — Multi-Agent Pipeline
 
-A FastAPI project
+A portfolio project that chains **four specialised AI agents** to turn a plain-English project description into a complete software specification. Planner → Engineer → Cost Estimator → Writer, streamed live to a dark-luxury React frontend via Server-Sent Events.
 
-Generated with [Full-Stack AI Agent Template](https://github.com/vstorm-co/full-stack-ai-agent-template).
+## Architecture
+
+```
+┌──────────────────────────────────────────────────┐
+│  Browser (React + Vite)                          │
+│  ┌─────────┐  ┌──────────┐  ┌──────────────────┐ │
+│  │ Sidebar │  │  Input   │  │  4 Agent Cards   │ │
+│  │ History │  │  Form    │  │  + Spec Output   │ │
+│  └─────────┘  └──────────┘  └──────────────────┘ │
+└────────────────────┬─────────────────────────────┘
+                     │  POST /api/v1/pipeline/run
+                     │  ← SSE stream
+┌────────────────────▼─────────────────────────────┐
+│  FastAPI Backend                                  │
+│  /api/v1/pipeline/run  (no auth — public demo)   │
+│                                                   │
+│  ┌──────────────────────────────────────────────┐ │
+│  │  Pipeline Runner  (sequential async chain)   │ │
+│  │                                              │ │
+│  │  1. Planner Agent   → phases JSON            │ │
+│  │  2. Engineer Agent  → tech stack + arch JSON │ │
+│  │  3. Cost Estimator  → budget + breakdown JSON│ │
+│  │  4. Writer Agent    → Markdown spec string   │ │
+│  └──────────────────────────────────────────────┘ │
+│                                                   │
+│  pydantic_ai · AnthropicModel (claude-haiku-4-5) │
+└──────────────────────────────────────────────────┘
+```
 
 ## Stack
 
-| Component | Technology |
-|-----------|-----------|
-| **Backend** | FastAPI + Pydantic v2 |
-| **Database** | PostgreSQL (async) |
-| **Auth** | JWT + API Key + refresh tokens |
-| **Cache** | Redis |
-| **AI Framework** | pydantic_ai (anthropic) |
-| **Tasks** | celery |
+| Layer | Technology |
+|-------|-----------|
+| Backend | FastAPI, pydantic_ai, Anthropic Claude |
+| AI Model | claude-haiku-4-5 (fast, cheap for chaining) |
+| Streaming | Server-Sent Events (SSE) |
+| Frontend | React 18, Vite 8, Tailwind CSS v4 |
+| Markdown | react-markdown |
 
-## Quick Start
+## Setup
 
-```bash
-# Install dependencies
-make install
-# One-command setup (Docker required)
-make quickstart
-```
-This will:
-1. Install Python dependencies
-2. Start all Docker services (database, Redis, vector store, etc.)
-3. Run database migrations
-4. Create an admin user (`admin@example.com` / `admin123`)
+### Prerequisites
 
-**Access:**
-- API: http://localhost:8000
-- Docs: http://localhost:8000/docs
-- Admin: http://localhost:8000/admin
+- Python ≥ 3.12 with [uv](https://docs.astral.sh/uv/)
+- Node.js ≥ 18
+- An **Anthropic API key**
 
-## Manual Setup
-
-If you prefer to set up step by step:
+### 1. Backend
 
 ```bash
-# 1. Install dependencies
-make install
-# 2. Start database
-make docker-db
-# 3. Create and apply migrations
-make db-migrate    # Enter: "Initial migration"
-make db-upgrade
+cd backend
 
-# 4. Create admin user
-make create-admin
+# Copy env file
+cp .env.example .env
 
-# 5. Start backend
-make run
+# Add your Anthropic API key
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env
+
+# Install deps
+uv sync
+
+# Start server (no database required for the pipeline endpoint)
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
-## Commands
+The pipeline endpoint is at `POST /api/v1/pipeline/run` — no auth needed.
 
-Run `make help` for all available commands. Key ones:
+### 2. Frontend
 
-| Command | Description |
-|---------|-------------|
-| `make run` | Start dev server with hot reload |
-| `make test` | Run tests |
-| `make lint` | Check code quality |
-| `make format` | Auto-format code |
-| `make db-migrate` | Create new migration |
-| `make db-upgrade` | Apply migrations |
-| `make create-admin` | Create admin user |
-| `make quickstart` | Full setup (install + docker + db + admin) |
-| `make docker-up` | Start all Docker services |
-| `make docker-down` | Stop all services |
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
+Vite starts at http://localhost:5173 and proxies `/api` to `localhost:8000`.
 
-## AI Agent
+### 3. Set your Anthropic API key
 
-Using **pydantic_ai** with **anthropic** provider.
+Open `backend/.env` and set:
 
-### Customize
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
 
-- **System prompt:** `app/agents/prompts.py`
-- **Add tools:** See `docs/howto/add-agent-tool.md`
-- **Agent config:** `.env` → `AI_MODEL`, `AI_TEMPERATURE`
+## Usage
 
-## Message Ratings
+1. Open http://localhost:5173
+2. Describe your project in the textarea
+3. Click **Generate Spec** (or Cmd+Enter)
+4. Watch four agents run sequentially, each card expanding with live results
+5. Read the final Markdown spec — click **Copy Spec** to grab it
 
-Users can rate AI responses with 👍/👎 and optional feedback comments.
-Administrators can view analytics and export rating data.
+## SSE Event Format
 
-See `docs/howto/use-ratings.md` for full documentation.
+```
+data: {"type": "agent_start",  "agent": "planner"}
+data: {"type": "agent_done",   "agent": "planner", "result": {"phases": [...]}}
+data: {"type": "agent_start",  "agent": "engineer"}
+data: {"type": "agent_done",   "agent": "engineer", "result": {"techStack": [...], ...}}
+data: {"type": "agent_start",  "agent": "cost_estimator"}
+data: {"type": "agent_done",   "agent": "cost_estimator", "result": {"low": 5000, ...}}
+data: {"type": "agent_start",  "agent": "writer"}
+data: {"type": "agent_done",   "agent": "writer", "result": {"preview": "..."}}
+data: {"type": "complete",     "spec": "# Project Specification: ..."}
+```
 
 ## Project Structure
 
 ```
-backend/app/
-├── api/routes/v1/        # API endpoints
-├── core/config.py        # Settings (from .env)
-├── services/             # Business logic
-├── repositories/         # Data access
-├── schemas/              # Pydantic models
-├── db/models/            # Database models
-├── agents/               # AI agents & tools
-├── commands/             # CLI commands (auto-discovered)
-└── worker/               # Background tasks
+ai_multi_agent/
+├── backend/
+│   └── app/
+│       ├── agents/
+│       │   ├── assistant.py          # Existing chat agent
+│       │   └── pipeline/
+│       │       ├── planner.py        # Phase planning agent
+│       │       ├── engineer.py       # Architecture agent
+│       │       ├── cost_estimator.py # Budget agent
+│       │       ├── writer.py         # Spec writer agent
+│       │       └── runner.py         # SSE pipeline orchestrator
+│       └── api/routes/v1/
+│           └── pipeline.py           # POST /api/v1/pipeline/run
+└── frontend/
+    └── src/
+        ├── components/
+        │   ├── AgentCard.jsx         # Per-agent status + result card
+        │   ├── InputForm.jsx         # Project description form
+        │   ├── Sidebar.jsx           # Run history (localStorage)
+        │   └── SpecOutput.jsx        # Rendered Markdown + copy button
+        ├── hooks/
+        │   └── usePipeline.js        # SSE streaming hook
+        └── App.jsx                   # App layout
 ```
 
-## Guides
+## Demo Screenshot
 
-| Guide | Description |
-|-------|-------------|
-| `docs/howto/add-api-endpoint.md` | Add a new API endpoint |
-| `docs/howto/add-agent-tool.md` | Create a new agent tool |
-| `docs/howto/customize-agent-prompt.md` | Customize agent behavior |
-| `docs/howto/add-background-task.md` | Add background tasks |
-
-## Environment Variables
-
-All config is in `backend/.env`. Key variables:
-
-```bash
-POSTGRES_HOST=localhost
-POSTGRES_PASSWORD=postgres
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-See `backend/.env.example` for all available variables.
+![Demo screenshot placeholder — add your own after running the app]
 
 ---
 
-*Generated with [Full-Stack AI Agent Template](https://github.com/vstorm-co/full-stack-ai-agent-template) v0.2.6*
+*Portfolio project — AI Multi-Agent Pipeline*
