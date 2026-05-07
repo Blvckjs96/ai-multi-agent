@@ -308,7 +308,12 @@ const RESULT_COMPONENTS = {
   writer: WriterResult,
 }
 
-export function AgentCard({ name, status, result }) {
+const PROVIDER_BADGE = {
+  anthropic: { label: 'Claude', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+  ollama:    { label: 'Gemma4', color: '#00d4ff', bg: 'rgba(0,212,255,0.1)' },
+}
+
+export function AgentCard({ name, status, result, provider }) {
   const meta = AGENT_META[name]
   const ResultComponent = RESULT_COMPONENTS[name]
   const isExpanded = status === 'thinking' || status === 'done'
@@ -384,6 +389,24 @@ export function AgentCard({ name, status, result }) {
           </div>
         </div>
 
+        {provider && (() => {
+          const p = PROVIDER_BADGE[provider] ?? PROVIDER_BADGE.anthropic
+          return (
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              padding: '2px 7px',
+              borderRadius: '4px',
+              background: p.bg,
+              color: p.color,
+              flexShrink: 0,
+            }}>
+              {p.label}
+            </span>
+          )
+        })()}
         <StatusBadge status={status} />
       </div>
 

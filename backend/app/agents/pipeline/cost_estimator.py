@@ -2,11 +2,11 @@
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.settings import ModelSettings
 
 from app.agents.pipeline.engineer import EngineerOutput
-from app.agents.pipeline.planner import PIPELINE_MODEL, PlannerOutput
+from app.agents.pipeline.model_router import get_model_for_agent
+from app.agents.pipeline.planner import PlannerOutput
 
 COST_ESTIMATOR_SYSTEM_PROMPT = """You are a senior freelance project manager who
 specialises in budgeting software projects for US-market clients.
@@ -56,18 +56,6 @@ class CostEstimatorOutput(BaseModel):
     )
 
 
-def get_cost_estimator_agent() -> Agent[None, CostEstimatorOutput]:
-    """Create and return the cost estimator agent."""
-    model = AnthropicModel(PIPELINE_MODEL)
-
-    return Agent[None, CostEstimatorOutput](
-        model=model,
-        model_settings=ModelSettings(temperature=0.2),
-        system_prompt=COST_ESTIMATOR_SYSTEM_PROMPT,
-        output_type=CostEstimatorOutput,
-    )
-
-
 async def run_cost_estimator(
     description: str,
     plan: PlannerOutput,
@@ -83,7 +71,13 @@ async def run_cost_estimator(
     Returns:
         CostEstimatorOutput with low/high range and itemised breakdown.
     """
-    agent = get_cost_estimator_agent()
+    model, _ = await get_model_for_agent("cost_estimator")
+    agent = Agent[None, CostEstimatorOutput](
+        model=model,
+        model_settings=ModelSettings(temperature=0.2),
+        system_prompt=COST_ESTIMATOR_SYSTEM_PROMPT,
+        output_type=CostEstimatorOutput,
+    )
 
     phases_text = "\n".join(
         f"  - {p.name}: {p.goal} ({p.duration})" for p in plan.phases

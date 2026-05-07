@@ -141,6 +141,11 @@ class Settings(BaseSettings):
     AI_FRAMEWORK: str = "pydantic_ai"
     LLM_PROVIDER: str = "anthropic"
 
+    # === Pipeline model rotation ===
+    PIPELINE_ANTHROPIC_MODEL: str = "claude-haiku-4-5"
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma4:31b-cloud"
+
     # === CORS ===
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080"]
     CORS_ALLOW_CREDENTIALS: bool = True

@@ -2,10 +2,10 @@
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.settings import ModelSettings
 
-from app.agents.pipeline.planner import PIPELINE_MODEL, PlannerOutput
+from app.agents.pipeline.model_router import get_model_for_agent
+from app.agents.pipeline.planner import PlannerOutput
 
 ENGINEER_SYSTEM_PROMPT = """You are a principal software engineer who specialises in
 system design and technical decision-making.
@@ -50,18 +50,6 @@ class EngineerOutput(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-def get_engineer_agent() -> Agent[None, EngineerOutput]:
-    """Create and return the engineer agent."""
-    model = AnthropicModel(PIPELINE_MODEL)
-
-    return Agent[None, EngineerOutput](
-        model=model,
-        model_settings=ModelSettings(temperature=0.3),
-        system_prompt=ENGINEER_SYSTEM_PROMPT,
-        output_type=EngineerOutput,
-    )
-
-
 async def run_engineer(description: str, plan: PlannerOutput) -> EngineerOutput:
     """Run the engineer agent and return structured output.
 
@@ -72,7 +60,13 @@ async def run_engineer(description: str, plan: PlannerOutput) -> EngineerOutput:
     Returns:
         EngineerOutput with tech stack, architecture, and key decisions.
     """
-    agent = get_engineer_agent()
+    model, _ = await get_model_for_agent("engineer")
+    agent = Agent[None, EngineerOutput](
+        model=model,
+        model_settings=ModelSettings(temperature=0.3),
+        system_prompt=ENGINEER_SYSTEM_PROMPT,
+        output_type=EngineerOutput,
+    )
 
     phases_text = "\n".join(
         f"  - {p.name}: {p.goal} ({p.duration})" for p in plan.phases

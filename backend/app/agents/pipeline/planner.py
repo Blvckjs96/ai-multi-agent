@@ -5,7 +5,9 @@ from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.settings import ModelSettings
 
-PIPELINE_MODEL = "claude-haiku-4-5"
+from app.agents.pipeline.model_router import get_model_for_agent
+
+PIPELINE_MODEL = "claude-haiku-4-5"  # kept for legacy imports
 
 PLANNER_SYSTEM_PROMPT = """You are a senior project planner with 15+ years of experience
 delivering software products. Given a project description you produce a realistic,
@@ -40,18 +42,6 @@ class PlannerOutput(BaseModel):
     )
 
 
-def get_planner_agent() -> Agent[None, PlannerOutput]:
-    """Create and return the planner agent."""
-    model = AnthropicModel(PIPELINE_MODEL)
-
-    return Agent[None, PlannerOutput](
-        model=model,
-        model_settings=ModelSettings(temperature=0.3),
-        system_prompt=PLANNER_SYSTEM_PROMPT,
-        output_type=PlannerOutput,
-    )
-
-
 async def run_planner(description: str) -> PlannerOutput:
     """Run the planner agent and return structured output.
 
@@ -61,7 +51,14 @@ async def run_planner(description: str) -> PlannerOutput:
     Returns:
         PlannerOutput with ordered phases.
     """
-    agent = get_planner_agent()
+    model, _ = await get_model_for_agent("planner")
+
+    agent = Agent[None, PlannerOutput](
+        model=model,
+        model_settings=ModelSettings(temperature=0.3),
+        system_prompt=PLANNER_SYSTEM_PROMPT,
+        output_type=PlannerOutput,
+    )
     result = await agent.run(
         f"Create a project plan for the following project:\n\n{description}"
     )

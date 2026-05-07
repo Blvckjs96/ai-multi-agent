@@ -1,12 +1,12 @@
 """Writer agent — synthesises all prior outputs into a human-readable spec."""
 
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.settings import ModelSettings
 
 from app.agents.pipeline.cost_estimator import CostEstimatorOutput
 from app.agents.pipeline.engineer import EngineerOutput
-from app.agents.pipeline.planner import PIPELINE_MODEL, PlannerOutput
+from app.agents.pipeline.model_router import get_model_for_agent
+from app.agents.pipeline.planner import PlannerOutput
 
 WRITER_SYSTEM_PROMPT = """You are a senior technical writer who produces clear,
 professional software project specifications.
@@ -45,18 +45,6 @@ Rules:
 """
 
 
-def get_writer_agent() -> Agent[None, str]:
-    """Create and return the writer agent."""
-    model = AnthropicModel(PIPELINE_MODEL)
-
-    return Agent[None, str](
-        model=model,
-        model_settings=ModelSettings(temperature=0.5),
-        system_prompt=WRITER_SYSTEM_PROMPT,
-        output_type=str,
-    )
-
-
 async def run_writer(
     description: str,
     plan: PlannerOutput,
@@ -74,7 +62,13 @@ async def run_writer(
     Returns:
         Formatted Markdown specification document as a string.
     """
-    agent = get_writer_agent()
+    model, _ = await get_model_for_agent("writer")
+    agent = Agent[None, str](
+        model=model,
+        model_settings=ModelSettings(temperature=0.5),
+        system_prompt=WRITER_SYSTEM_PROMPT,
+        output_type=str,
+    )
 
     phases_text = "\n".join(
         f"- **{p.name}** ({p.duration}): {p.goal}" for p in plan.phases

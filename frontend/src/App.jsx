@@ -188,6 +188,7 @@ export default function App() {
                     name={name}
                     status={agents[name].status}
                     result={agents[name].result}
+                    provider={agents[name].provider}
                   />
                 ))}
               </div>

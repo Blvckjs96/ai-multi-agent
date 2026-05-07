@@ -7,6 +7,7 @@ from typing import Any
 
 from app.agents.pipeline.cost_estimator import run_cost_estimator
 from app.agents.pipeline.engineer import run_engineer
+from app.agents.pipeline.model_router import AGENT_PROVIDER_MAP
 from app.agents.pipeline.planner import run_planner
 from app.agents.pipeline.writer import run_writer
 
@@ -35,7 +36,7 @@ async def run_pipeline(description: str) -> AsyncGenerator[str, None]:
     """
     try:
         # ── 1. Planner ──────────────────────────────────────────────────────
-        yield _sse_event({"type": "agent_start", "agent": "planner"})
+        yield _sse_event({"type": "agent_start", "agent": "planner", "provider": AGENT_PROVIDER_MAP["planner"].value})
         logger.info("Pipeline: running planner")
 
         plan = await run_planner(description)
@@ -54,7 +55,7 @@ async def run_pipeline(description: str) -> AsyncGenerator[str, None]:
         )
 
         # ── 2. Engineer ─────────────────────────────────────────────────────
-        yield _sse_event({"type": "agent_start", "agent": "engineer"})
+        yield _sse_event({"type": "agent_start", "agent": "engineer", "provider": AGENT_PROVIDER_MAP["engineer"].value})
         logger.info("Pipeline: running engineer")
 
         architecture = await run_engineer(description, plan)
@@ -72,7 +73,7 @@ async def run_pipeline(description: str) -> AsyncGenerator[str, None]:
         )
 
         # ── 3. Cost Estimator ───────────────────────────────────────────────
-        yield _sse_event({"type": "agent_start", "agent": "cost_estimator"})
+        yield _sse_event({"type": "agent_start", "agent": "cost_estimator", "provider": AGENT_PROVIDER_MAP["cost_estimator"].value})
         logger.info("Pipeline: running cost_estimator")
 
         cost = await run_cost_estimator(description, plan, architecture)
@@ -94,7 +95,7 @@ async def run_pipeline(description: str) -> AsyncGenerator[str, None]:
         )
 
         # ── 4. Writer ───────────────────────────────────────────────────────
-        yield _sse_event({"type": "agent_start", "agent": "writer"})
+        yield _sse_event({"type": "agent_start", "agent": "writer", "provider": AGENT_PROVIDER_MAP["writer"].value})
         logger.info("Pipeline: running writer")
 
         spec = await run_writer(description, plan, architecture, cost)

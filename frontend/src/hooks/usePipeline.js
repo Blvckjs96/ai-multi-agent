@@ -15,7 +15,7 @@ import { useCallback, useRef, useState } from 'react'
 const AGENT_NAMES = ['planner', 'engineer', 'cost_estimator', 'writer']
 
 const initialAgentState = () =>
-  Object.fromEntries(AGENT_NAMES.map((name) => [name, { status: 'waiting', result: null }]))
+  Object.fromEntries(AGENT_NAMES.map((name) => [name, { status: 'waiting', result: null, provider: null }]))
 
 export function usePipeline() {
   const [agents, setAgents] = useState(initialAgentState)
@@ -86,7 +86,7 @@ export function usePipeline() {
             }
 
             if (event.type === 'agent_start') {
-              updateAgent(event.agent, { status: 'thinking' })
+              updateAgent(event.agent, { status: 'thinking', provider: event.provider ?? null })
             } else if (event.type === 'agent_done') {
               updateAgent(event.agent, { status: 'done', result: event.result })
             } else if (event.type === 'complete') {
