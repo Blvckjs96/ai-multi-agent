@@ -73,8 +73,6 @@ function NavItem({ item, active, collapsed, onModeChange }) {
       ? 'var(--accent-cyan)'
       : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
     userSelect: 'none',
-    background: 'none',
-    border: 'none',
     width: '100%',
     textAlign: 'left',
   }
