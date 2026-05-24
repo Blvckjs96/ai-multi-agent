@@ -243,7 +243,7 @@ export default function AppSidebar({ mode, onModeChange }) {
 
       <div
         style={settingsBtnStyle}
-        onClick={() => console.log('settings')}
+        onClick={() => {}}
         onMouseEnter={() => setSettingsHovered(true)}
         onMouseLeave={() => setSettingsHovered(false)}
         title="Settings"
