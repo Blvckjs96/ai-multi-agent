@@ -73,6 +73,10 @@ function NavItem({ item, active, collapsed, onModeChange }) {
       ? 'var(--accent-cyan)'
       : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
     userSelect: 'none',
+    background: 'none',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left',
   }
 
   const labelStyle = {
@@ -84,7 +88,8 @@ function NavItem({ item, active, collapsed, onModeChange }) {
   }
 
   return (
-    <div
+    <button
+      type="button"
       style={containerStyle}
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
@@ -93,7 +98,7 @@ function NavItem({ item, active, collapsed, onModeChange }) {
     >
       <Icon size={16} strokeWidth={1.8} style={{ flexShrink: 0 }} />
       <span style={labelStyle}>{item.label}</span>
-    </div>
+    </button>
   )
 }
 
@@ -200,7 +205,13 @@ export default function AppSidebar({ mode, onModeChange }) {
         <span style={{ ...logoTextStyle, opacity: collapsed ? 0 : 1, transition: 'opacity 200ms ease-out' }}>
           Argo
         </span>
-        <button style={toggleBtnStyle} onClick={toggleCollapsed} title={collapsed ? 'Expand' : 'Collapse'}>
+        <button
+          type="button"
+          style={toggleBtnStyle}
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand' : 'Collapse'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
           {collapsed
             ? <ChevronRight size={14} />
             : <ChevronLeft size={14} />
@@ -208,16 +219,18 @@ export default function AppSidebar({ mode, onModeChange }) {
         </button>
       </div>
 
-      <div style={newChatStyle}
+      <button
+        type="button"
+        style={{...newChatStyle, border: '1px solid var(--accent-cyan)', cursor: 'pointer'}}
         onClick={handleNewChat}
         onMouseEnter={() => setNewChatHovered(true)}
         onMouseLeave={() => setNewChatHovered(false)}
       >
         <Plus size={13} strokeWidth={2.2} />
         New Chat
-      </div>
+      </button>
 
-      <nav style={navScrollStyle}>
+      <nav aria-label="Primary navigation" style={navScrollStyle}>
         <div style={{ ...sectionLabelStyle, opacity: collapsed ? 0 : 1 }}>Workspace</div>
         {WORKSPACE_ITEMS.map(item => (
           <NavItem
