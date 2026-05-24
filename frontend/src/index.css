@@ -310,8 +310,6 @@ body {
 }
 .glow-pulse { animation: glow-pulse 2.4s ease-in-out infinite; }
 
-@keyframes argo-spin { to { transform: rotate(360deg); } }
-
 /* ── Markdown spec output ───────────────────────────────────── */
 
 .spec-content h1 {
