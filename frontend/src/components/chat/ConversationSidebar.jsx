@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, MoreHorizontal } from 'lucide-react'
 
 const GROUPS = [
@@ -43,14 +43,15 @@ export default function ConversationSidebar({
     setEditValue(conv.title)
   }
 
-  function commitEdit(id) {
-    const v = editValue.trim()
+  const commitEdit = useCallback((id, value) => {
+    const v = (value ?? editValue).trim()
     if (v) onRename?.(id, v)
     setEditingId(null)
-  }
+    setMenuOpenId(null)
+  }, [editValue, onRename])
 
   function handleKey(e, id) {
-    if (e.key === 'Enter') commitEdit(id)
+    if (e.key === 'Enter') commitEdit(id, e.currentTarget.value)
     if (e.key === 'Escape') setEditingId(null)
   }
 
@@ -93,10 +94,19 @@ export default function ConversationSidebar({
                 return (
                   <div
                     key={conv.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-current={active ? 'true' : undefined}
                     style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '7px 12px', cursor: 'pointer', borderLeft: active ? '2px solid var(--accent-cyan)' : '2px solid transparent', background: active ? 'rgba(0,212,255,.08)' : hovered ? 'var(--bg-elevated)' : 'transparent', color: active ? 'var(--accent-cyan)' : 'var(--text-secondary)', userSelect: 'none' }}
                     onMouseEnter={() => setHoveredId(conv.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => !editing && onSelect?.(conv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        if (!editing) onSelect?.(conv.id)
+                      }
+                    }}
                     onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(conv.id) }}
                   >
                     {editing ? (
@@ -105,7 +115,7 @@ export default function ConversationSidebar({
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => handleKey(e, conv.id)}
-                        onBlur={() => commitEdit(conv.id)}
+                        onBlur={(e) => commitEdit(conv.id, e.currentTarget.value)}
                         onClick={(e) => e.stopPropagation()}
                         style={{ flex: 1, fontSize: 12, background: 'var(--bg-elevated)', border: '1px solid var(--accent-cyan)', borderRadius: 3, color: 'var(--text-primary)', padding: '1px 4px', outline: 'none', minWidth: 0 }}
                       />
@@ -115,7 +125,8 @@ export default function ConversationSidebar({
                     {!editing && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpen ? null : conv.id) }}
-                        style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 1, borderRadius: 3, flexShrink: 0, opacity: hovered || menuOpen ? 1 : 0 }}
+                        tabIndex={hovered || menuOpen ? 0 : -1}
+                        style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 1, borderRadius: 3, flexShrink: 0, opacity: hovered || menuOpen ? 1 : 0, pointerEvents: hovered || menuOpen ? 'auto' : 'none' }}
                         title="Options"
                       >
                         <MoreHorizontal size={12} />
