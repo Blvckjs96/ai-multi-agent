@@ -10,6 +10,8 @@ export function useConversations() {
 
   // Fetch conversations on mount
   useEffect(() => {
+    const controller = new AbortController()
+
     const fetchConversations = async () => {
       try {
         setLoading(true)
@@ -17,6 +19,7 @@ export function useConversations() {
         const token = localStorage.getItem('token')
         const res = await fetch(API_BASE, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: controller.signal,
         })
 
         if (!res.ok) {
@@ -31,7 +34,8 @@ export function useConversations() {
         }))
         setConversations(mapped)
       } catch (err) {
-        setError(err.message)
+        if (err.name === 'AbortError') return
+        setError(err?.message ?? 'Unknown error')
         setConversations([])
       } finally {
         setLoading(false)
@@ -39,6 +43,7 @@ export function useConversations() {
     }
 
     fetchConversations()
+    return () => controller.abort()
   }, [])
 
   const createConversation = useCallback((title) => {
@@ -59,20 +64,19 @@ export function useConversations() {
 
   const deleteConversation = useCallback((id) => {
     setConversations((prev) => prev.filter((conv) => conv.id !== id))
-    if (activeId === id) {
-      setActiveId(null)
-    }
-  }, [activeId])
+    setActiveId((prev) => (prev === id ? null : prev))
+  }, [])
 
   const selectConversation = useCallback((id) => {
     setActiveId(id)
   }, [])
 
   const groupedConversations = useMemo(() => {
+    const MS_PER_DAY = 86_400_000
     const now = new Date()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const startOfYesterday = new Date(startOfToday - 86400000)
-    const startOfWeek = new Date(startOfToday - 6 * 86400000)
+    const startOfYesterday = new Date(startOfToday - MS_PER_DAY)
+    const startOfWeek = new Date(startOfToday - 6 * MS_PER_DAY)
 
     const groups = {
       today: [],
