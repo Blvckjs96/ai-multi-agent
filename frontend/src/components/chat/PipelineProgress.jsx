@@ -21,56 +21,27 @@ const headerStyle = {
   color: 'var(--text-primary)',
 }
 
-function StepDot({ status }) {
-  const base = {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    flexShrink: 0,
-  }
-  if (status === 'pending') {
-    return (
-      <span style={{ ...base, border: '1.5px solid var(--text-muted)', background: 'transparent' }} />
-    )
-  }
-  if (status === 'running') {
-    return (
-      <span
-        style={{ ...base, background: 'var(--accent-cyan)', animation: 'argo-dot-pulse 1.2s ease-in-out infinite' }}
-      />
-    )
-  }
-  if (status === 'done') {
-    return <span style={{ ...base, background: 'var(--status-success)' }} />
-  }
-  if (status === 'error') {
-    return <span style={{ ...base, background: 'var(--status-error)' }} />
-  }
-  return null
+const dotStyles = {
+  pending: { border: '1.5px solid var(--text-muted)', background: 'transparent' },
+  running: { background: 'var(--accent-cyan)', animation: 'argo-dot-pulse 1.2s ease-in-out infinite' },
+  done: { background: 'var(--status-success)' },
+  error: { background: 'var(--status-error)' },
 }
 
-function StepStatus({ status, duration }) {
-  if (status === 'pending') {
-    return <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
-  }
-  if (status === 'running') {
-    return (
-      <span style={{ fontSize: 12, color: 'var(--accent-cyan)', fontStyle: 'italic' }}>
-        running…
-      </span>
-    )
-  }
-  if (status === 'done') {
-    return (
-      <span style={{ fontSize: 12, color: 'var(--status-success)' }}>
-        ✓{duration ? ` ${duration}` : ''}
-      </span>
-    )
-  }
-  if (status === 'error') {
-    return <span style={{ fontSize: 12, color: 'var(--status-error)' }}>✗</span>
-  }
-  return null
+const dotBase = { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }
+
+const statusText = {
+  pending: '—',
+  running: 'running…',
+  done: (duration) => `✓${duration ? ` ${duration}` : ''}`,
+  error: '✗',
+}
+
+const statusColor = {
+  pending: 'var(--text-muted)',
+  running: 'var(--accent-cyan)',
+  done: 'var(--status-success)',
+  error: 'var(--status-error)',
 }
 
 function StepRow({ step, expanded, onToggle }) {
@@ -90,14 +61,14 @@ function StepRow({ step, expanded, onToggle }) {
         }}
         onClick={hasResult ? onToggle : undefined}
       >
-        <StepDot status={step.status} />
+        <span style={{ ...dotBase, ...dotStyles[step.status] }} />
         <span style={{ fontSize: 12, color: nameColor, flex: 1 }}>{step.name}</span>
-        <StepStatus status={step.status} duration={step.duration} />
+        <span style={{ fontSize: 12, color: statusColor[step.status], fontStyle: step.status === 'running' ? 'italic' : 'normal' }}>
+          {typeof statusText[step.status] === 'function' ? statusText[step.status](step.duration) : statusText[step.status]}
+        </span>
         {hasResult && (
           <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-            {expanded
-              ? <ChevronDown size={12} />
-              : <ChevronRight size={12} />}
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </span>
         )}
       </div>
