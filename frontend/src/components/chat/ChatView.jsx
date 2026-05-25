@@ -4,25 +4,39 @@ import { ChatInput } from './ChatInput'
 import { ConfirmBanner } from './ConfirmBanner'
 import { STATUS } from '../../hooks/useChat'
 
-// ── Spinner animation ─────────────────────────────────────────────────────
-const spinnerStyle = `@keyframes argo-spin { to { transform: rotate(360deg); } }`
-
+// ── Spinner animation (keyframe in index.css) ─────────────────────────────
 function Spinner({ color = '#00d4ff', size = 14 }) {
   return (
-    <>
-      <style>{spinnerStyle}</style>
-      <div
-        style={{
-          width: size,
-          height: size,
-          border: `2px solid rgba(255,255,255,0.12)`,
-          borderTopColor: color,
-          borderRadius: '50%',
-          animation: 'argo-spin 0.75s linear infinite',
-          flexShrink: 0,
-        }}
-      />
-    </>
+    <div
+      style={{
+        width: size,
+        height: size,
+        border: `2px solid rgba(255,255,255,0.12)`,
+        borderTopColor: color,
+        borderRadius: '50%',
+        animation: 'argo-spin 0.75s linear infinite',
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
+// ── Typing indicator (three bouncing dots) ───────────────────────────────
+function TypingIndicator() {
+  const dotStyle = {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: 'var(--accent-cyan)',
+    display: 'inline-block',
+    animation: 'argo-typing-bounce 1.2s ease-in-out infinite',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 0 4px' }}>
+      {[0, 0.15, 0.3].map((delay, i) => (
+        <span key={i} style={{ ...dotStyle, animationDelay: `${delay}s` }} />
+      ))}
+    </div>
   )
 }
 
@@ -235,6 +249,11 @@ export function ChatView({
         {messages.map((m) => (
           <ChatBubble key={m.id} message={m} />
         ))}
+
+        {/* Typing indicator while planning (shows between user message and assistant response) */}
+        {status === STATUS.PLANNING && (messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
+          <TypingIndicator />
+        )}
 
         {/* Live phase indicator (planning / executing) */}
         <PhaseIndicator status={status} activeTools={activeTools} onAbort={onCancel} />
