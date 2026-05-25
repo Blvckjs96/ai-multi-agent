@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Plus, FolderOpen } from 'lucide-react'
 import { IssueRow } from './IssueRow'
 
 const API = '/api/v1/tasks'
@@ -176,8 +177,32 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
 
   if (!workspaceId) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6, padding: 16 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Select a workspace to see issues</span>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+        <FolderOpen size={32} color="var(--text-muted)" strokeWidth={1.5} />
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+          No repository folder selected
+        </span>
+        <button
+          onClick={() => {}}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 16px',
+            borderRadius: 9999,
+            background: 'transparent',
+            border: '1px solid var(--accent-cyan)',
+            color: 'var(--accent-cyan)',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+            fontFamily: 'inherit',
+          }}
+        >
+          <Plus size={13} strokeWidth={2.2} />
+          Add Repository Folder
+        </button>
       </div>
     )
   }
@@ -223,6 +248,31 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
             onRefresh={load}
           />
         ))}
+      </div>
+
+      {/* FAB Button */}
+      <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+        <button
+          onClick={() => {}}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 16px',
+            borderRadius: 9999,
+            background: 'transparent',
+            border: '1px solid var(--accent-cyan)',
+            color: 'var(--accent-cyan)',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+            fontFamily: 'inherit',
+          }}
+        >
+          <Plus size={13} strokeWidth={2.2} />
+          Add Repository Folder
+        </button>
       </div>
     </div>
   )
