@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react'
-import { SendHorizonal } from 'lucide-react'
+import { SendHorizonal, Paperclip } from 'lucide-react'
 
-export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€¦' }) {
+export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€¦', onFileSelect }) {
   const ref = useRef(null)
+  const fileInputRef = useRef(null)
 
   const submit = useCallback(() => {
     const val = ref.current?.value?.trim()
@@ -27,6 +28,25 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€
     e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px'
   }, [])
 
+  const handleFileClick = useCallback(() => {
+    if (!disabled && fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+  }, [disabled])
+
+  const handleFileChange = useCallback(
+    (e) => {
+      if (onFileSelect && e.target.files?.length > 0) {
+        onFileSelect(e.target.files)
+      }
+      // Reset input so same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    },
+    [onFileSelect],
+  )
+
   return (
     <div
       style={{
@@ -39,6 +59,41 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€
         backdropFilter: 'blur(12px)',
       }}
     >
+      <button
+        onClick={handleFileClick}
+        disabled={disabled}
+        aria-label="Attach file"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--r-sm, 6px)',
+          border: 'none',
+          background: 'transparent',
+          color: disabled ? 'var(--text-muted)' : 'var(--text-muted)',
+          cursor: disabled ? 'default' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          transition: 'color 150ms',
+        }}
+        onMouseEnter={(e) => {
+          if (!disabled) e.target.style.color = 'var(--text-secondary)'
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.color = 'var(--text-muted)'
+        }}
+      >
+        <Paperclip size={20} />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
       <textarea
         ref={ref}
         rows={1}
