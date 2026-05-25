@@ -41,7 +41,7 @@ const AGENT_NAMES = ['planner', 'engineer', 'cost_estimator', 'writer']
 
 // ── Chat standalone panel ─────────────────────────────────────────────────────
 
-function ChatPanel({ workspaceId }) {
+function ChatPanel({ workspaceId, activeConversationId }) {
   const [view, setView] = useState('chat')
   const chat = useChat()
 
@@ -266,7 +266,7 @@ export default function App() {
         {/* Content area */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {mode === 'tasks'       && <TasksLayout workspaceId={workspaceId} />}
-          {mode === 'chat'        && <ChatPanel workspaceId={workspaceId} />}
+          {mode === 'chat'        && <ChatPanel workspaceId={workspaceId} activeConversationId={convs.activeId} />}
           {mode === 'pipeline'    && <PipelinePanel />}
           {mode === 'chiron'      && <ChironPanel workspaceId={workspaceId} />}
           {mode === 'wiki'        && <WikiPanel workspaceId={workspaceId} />}

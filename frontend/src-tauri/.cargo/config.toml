@@ -1,0 +1,5 @@
+# Workaround for Apple Clang 21 (Xcode on macOS 26 / Darwin 25.x) segfault
+# when linking Rust proc-macro dylibs (serde_derive, etc.).
+# Forces use of the classic ld64 linker instead of the new linker that crashes.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-ld_classic"]

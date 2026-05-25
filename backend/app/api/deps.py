@@ -175,12 +175,33 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentAdmin = Annotated[User, Depends(RoleChecker(UserRole.ADMIN))]
 
+# Optional — returns None if no valid token is present (for endpoints that work with or without auth)
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
+)
+
+
+async def get_optional_current_user(
+    token: Annotated[str | None, Depends(oauth2_scheme_optional)],
+    user_service: UserSvc,
+) -> User | None:
+    """Return the authenticated user or None (no error if unauthenticated)."""
+    if not token:
+        return None
+    try:
+        return await get_current_user(token, user_service)  # type: ignore[arg-type]
+    except (AuthenticationError, AuthorizationError):
+        return None
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]
+
 
 # WebSocket authentication dependency
 from fastapi import WebSocket, Cookie
 
 
-_WS_TOKEN_PROTOCOL_PREFIX = "access_token."
+_WS_TOKEN_PROTOCOL_PREFIX = "access_token."  # nosec B105
 
 
 def _extract_ws_auth(websocket: WebSocket) -> tuple[str | None, str | None]:
@@ -290,3 +311,12 @@ async def verify_api_key(
 
 
 ValidAPIKey = Annotated[str, Depends(verify_api_key)]
+
+
+def require_permission(permission: str):
+    """Return a FastAPI Depends() that verifies authentication.
+
+    Compatibility shim for Argon routes. Argo's desktop mode grants all
+    permissions to any authenticated user; `permission` is not enforced.
+    """
+    return Depends(get_current_user)

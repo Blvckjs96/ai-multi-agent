@@ -22,6 +22,7 @@ export function usePipeline() {
   const [spec, setSpec] = useState(null)
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState(null)
+  const [pipelineStats, setPipelineStats] = useState(null)
   const abortRef = useRef(null)
 
   const reset = useCallback(() => {
@@ -30,6 +31,7 @@ export function usePipeline() {
     setSpec(null)
     setIsRunning(false)
     setError(null)
+    setPipelineStats(null)
   }, [])
 
   const updateAgent = useCallback((name, patch) => {
@@ -85,7 +87,14 @@ export function usePipeline() {
               continue
             }
 
-            if (event.type === 'agent_start') {
+            if (event.type === 'pipeline_init') {
+              setPipelineStats({
+                tokensBefore: event.tokens_before,
+                tokensAfter: event.tokens_after,
+                ragChunks: event.rag_chunks,
+                compressionEnabled: event.compression_enabled,
+              })
+            } else if (event.type === 'agent_start') {
               updateAgent(event.agent, { status: 'thinking', provider: event.provider ?? null })
             } else if (event.type === 'agent_done') {
               updateAgent(event.agent, { status: 'done', result: event.result })
@@ -107,5 +116,5 @@ export function usePipeline() {
     [reset, updateAgent],
   )
 
-  return { agents, spec, isRunning, error, runPipeline, reset }
+  return { agents, spec, isRunning, error, pipelineStats, runPipeline, reset }
 }

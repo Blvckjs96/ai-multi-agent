@@ -142,9 +142,79 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "anthropic"
 
     # === Pipeline model rotation ===
-    PIPELINE_ANTHROPIC_MODEL: str = "claude-haiku-4-5"
+    PIPELINE_ANTHROPIC_MODEL: str = "claude-haiku-4-5"  # kept for compatibility
+    # Task-type routing: reasoning tasks get a stronger model, fast tasks use haiku
+    AI_REASONING_MODEL: str = "claude-sonnet-4-6"
+    AI_FAST_MODEL: str = "claude-haiku-4-5"
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:31b-cloud"
+
+    # === Hybrid Router (Argo) ===
+    ROUTING_MODE: Literal["auto", "prefer_local", "prefer_cloud", "force_local", "force_cloud"] = (
+        "auto"
+    )
+    PROVIDER_PROBE_TTL_SECONDS: int = 60  # how long to cache provider availability checks
+    CLAUDE_CLI_PATH: str = "claude"  # overridable via env; auto-resolved at startup if not found on PATH
+
+    @field_validator("CLAUDE_CLI_PATH", mode="after")
+    @classmethod
+    def resolve_claude_cli_path(cls, v: str) -> str:
+        import shutil
+        if shutil.which(v):
+            return v
+        # PATH may be minimal in GUI/Tauri context — try extended lookup
+        from app.core.cli_utils import find_binary
+        resolved = find_binary("claude")
+        return resolved if resolved else v
+
+    # === NVIDIA NIM ===
+    NIM_API_KEY: str = ""
+    NIM_HOST: str = "https://integrate.api.nvidia.com/v1"
+    # Default fast model: Mistral Nemotron — agentic, instruction following, function calling
+    NIM_FAST_MODEL: str = "mistralai/mistral-nemotron"
+    # Default reasoning model: Step-3.5-Flash — 200B sparse MoE, strong at reasoning + planning
+    NIM_REASONING_MODEL: str = "stepfun-ai/step-3.5-flash"
+    NIM_ENABLED: bool = False  # only enable when NIM_API_KEY is set
+
+    # === Token compression (TokenJuice-inspired) ===
+    TOKEN_COMPRESSION_ENABLED: bool = True
+
+    # === OMNI UI/UX Skill Server ===
+    # HTTP adapter exposing omni_generate / omni_brand. Empty = disabled.
+    OMNI_URL: str = ""
+
+    # === Argomemory (Memory Brain Tier 2) ===
+    ARGOMEMORY_URL: str = "http://localhost:3111"
+    ARGOMEMORY_SECRET: str = ""
+    # Absolute path to dist/standalone.mjs — injected as MCP server into every Claude CLI session.
+    # Leave empty to disable argomemory MCP injection (context recall still works via REST).
+    ARGOMEMORY_MCP_PATH: str = ""
+    ARGOMEMORY_ENABLED: bool = True  # set False to skip all memory calls
+
+    # === OpenAI (optional — kept for future use) ===
+    OPENAI_API_KEY: str = ""
+
+    # === MinIO (object storage for Chiron source files) ===
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
+    MINIO_BUCKET_CHIRON: str = "chiron-sources"
+    MINIO_SECURE: bool = False
+
+    # === Chiron MCP (Knowledge Brain Tier 3) ===
+    # Base URL for the Chiron MCP HTTP endpoint (mounted at /chiron/mcp).
+    # Claude CLI sessions use this URL to call Chiron tools via streamable-http.
+    CHIRON_MCP_BASE_URL: str = "http://localhost:8000"
+
+    # === Chiron Embeddings (Ollama — local, free) ===
+    # Uses OLLAMA_HOST for the HTTP endpoint. Model must output 768-dimensional vectors.
+    # Default: nomic-embed-text (274 MB, 768d, excellent quality/size balance).
+    CHIRON_EMBEDDING_MODEL: str = "nomic-embed-text"
+
+    # === GitHub OAuth ===
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    GITHUB_REDIRECT_URI: str = "http://localhost:5001/github/callback"
 
     # === CORS ===
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8080"]

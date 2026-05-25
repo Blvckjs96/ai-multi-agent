@@ -12,6 +12,18 @@
       "Bash(cd backend && uv run ruff*)",
       "Bash(cd backend && uv run ty*)",
       "Bash(cd backend && uv run alembic*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(curl * | bash*)",
+      "Bash(wget * | sh*)",
+      "Bash(chmod 777 *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git commit --amend*)",
+      "Bash(pkill *)",
+      "Bash(kill -9 *)"
     ]
   }
 }

@@ -94,8 +94,8 @@ class FileUploadService:
                             df = table.to_pandas()
                             if not df.empty:
                                 texts.append(df.to_markdown(index=False))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to parse table in PDF page: %s", exc)
             doc.close()
             return "\n\n".join(texts) if texts else None
         except Exception as e:

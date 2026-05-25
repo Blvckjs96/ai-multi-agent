@@ -1,5 +1,6 @@
 """User database model."""
 
+import secrets
 import uuid
 from enum import StrEnum
 
@@ -34,6 +35,13 @@ class User(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     role: Mapped[str] = mapped_column(String(50), default=UserRole.USER.value, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    mcp_token: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
+
+    @staticmethod
+    def generate_mcp_token() -> str:
+        return secrets.token_hex(32)
 
     @property
     def user_role(self) -> UserRole:

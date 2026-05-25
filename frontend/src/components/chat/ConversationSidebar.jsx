@@ -56,7 +56,7 @@ export default function ConversationSidebar({
   }
 
   const s = {
-    root: { width: 200, minWidth: 200, height: '100dvh', background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 },
+    root: { width: 200, minWidth: 200, height: '100%', background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' },
     scroll: { flex: 1, overflowY: 'auto' },
     groupLabel: { fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '8px 12px 4px' },

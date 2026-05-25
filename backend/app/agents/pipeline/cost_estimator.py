@@ -1,12 +1,18 @@
 """Cost estimator agent — produces a realistic USD budget for the project."""
 
+import asyncio
+import logging
+
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
+from app.agents import skill_library
 from app.agents.pipeline.engineer import EngineerOutput
 from app.agents.pipeline.model_router import get_model_for_agent
 from app.agents.pipeline.planner import PlannerOutput
+
+logger = logging.getLogger(__name__)
 
 COST_ESTIMATOR_SYSTEM_PROMPT = """You are a senior freelance project manager who
 specialises in budgeting software projects for US-market clients.
@@ -72,16 +78,31 @@ async def run_cost_estimator(
         CostEstimatorOutput with low/high range and itemised breakdown.
     """
     model, _ = await get_model_for_agent("cost_estimator")
+
+    guidance = await asyncio.get_event_loop().run_in_executor(
+        None, skill_library.get_guidance, description, "cost_estimator"
+    )
+
+    system_prompt = COST_ESTIMATOR_SYSTEM_PROMPT
+    if guidance:
+        selected = skill_library.select_skills(description, "cost_estimator")
+        system_prompt = (
+            f"{COST_ESTIMATOR_SYSTEM_PROMPT}\n\n"
+            "## Cost Estimation Skill Guidance\n"
+            f"Skills selected for this task: {', '.join(selected)}.\n"
+            "Apply the heuristics below when estimating LLM API and infrastructure costs.\n\n"
+            f"{guidance}"
+        )
+        logger.debug("Cost estimator skills injected: %s (%d chars)", selected, len(guidance))
+
     agent = Agent[None, CostEstimatorOutput](
         model=model,
         model_settings=ModelSettings(temperature=0.2),
-        system_prompt=COST_ESTIMATOR_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         output_type=CostEstimatorOutput,
     )
 
-    phases_text = "\n".join(
-        f"  - {p.name}: {p.goal} ({p.duration})" for p in plan.phases
-    )
+    phases_text = "\n".join(f"  - {p.name}: {p.goal} ({p.duration})" for p in plan.phases)
     tech_text = ", ".join(architecture.tech_stack)
     decisions_text = "\n".join(f"  - {d}" for d in architecture.key_decisions)
 

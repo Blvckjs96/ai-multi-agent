@@ -1,0 +1,72 @@
+{
+  "hash": "229ac5fa",
+  "configHash": "af818073",
+  "lockfileHash": "a7c14f96",
+  "browserHash": "15e6a98e",
+  "optimized": {
+    "@tauri-apps/api/core": {
+      "src": "../../node_modules/.pnpm/@tauri-apps+api@2.11.0/node_modules/@tauri-apps/api/core.js",
+      "file": "@tauri-apps_api_core.js",
+      "fileHash": "c5be9139",
+      "needsInterop": false
+    },
+    "@tauri-apps/api/event": {
+      "src": "../../node_modules/.pnpm/@tauri-apps+api@2.11.0/node_modules/@tauri-apps/api/event.js",
+      "file": "@tauri-apps_api_event.js",
+      "fileHash": "80abe002",
+      "needsInterop": false
+    },
+    "@xterm/addon-fit": {
+      "src": "../../node_modules/.pnpm/@xterm+addon-fit@0.10.0_@xterm+xterm@5.5.0/node_modules/@xterm/addon-fit/lib/addon-fit.js",
+      "file": "@xterm_addon-fit.js",
+      "fileHash": "21336092",
+      "needsInterop": true
+    },
+    "@xterm/xterm": {
+      "src": "../../node_modules/.pnpm/@xterm+xterm@5.5.0/node_modules/@xterm/xterm/lib/xterm.js",
+      "file": "@xterm_xterm.js",
+      "fileHash": "5bcaa06f",
+      "needsInterop": true
+    },
+    "lucide-react": {
+      "src": "../../node_modules/.pnpm/lucide-react@1.16.0_react@19.2.6/node_modules/lucide-react/dist/esm/lucide-react.mjs",
+      "file": "lucide-react.js",
+      "fileHash": "5a0f0b0a",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/.pnpm/react-dom@19.2.6_react@19.2.6/node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "cf69a3d2",
+      "needsInterop": true
+    },
+    "react-markdown": {
+      "src": "../../node_modules/.pnpm/react-markdown@10.1.0_@types+react@19.2.14_react@19.2.6/node_modules/react-markdown/index.js",
+      "file": "react-markdown.js",
+      "fileHash": "22bcf762",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/.pnpm/react@19.2.6/node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "f3834da6",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/.pnpm/react@19.2.6/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "da322c77",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-CYJPkc-J": {
+      "file": "chunk-CYJPkc-J.js",
+      "isDynamicEntry": false
+    },
+    "core-Cge_tINr": {
+      "file": "core-Cge_tINr.js",
+      "isDynamicEntry": false
+    }
+  }
+}

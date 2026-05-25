@@ -1,11 +1,3 @@
-/**
- * Sidebar — run history pulled from localStorage.
- *
- * Props:
- *   onSelectRun(description: string) — restore a past run's description
- *   currentDescription — active description (to skip re-running same)
- */
-
 import { useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'pipeline_history'
@@ -19,7 +11,6 @@ export function saveRunToHistory(description) {
     preview: description.slice(0, 60),
   }
   const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  // Avoid exact duplicates
   const deduped = existing.filter((e) => e.description !== description)
   const updated = [entry, ...deduped].slice(0, MAX_HISTORY)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -36,35 +27,28 @@ function formatRelative(iso) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function Sidebar({ onSelectRun }) {
+export function Sidebar({ onSelectRun, onNewRun }) {
   const [history, setHistory] = useState([])
 
+  const load = () => {
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    setHistory(items)
+  }
+
   useEffect(() => {
-    const load = () => {
-      const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      setHistory(items)
-    }
     load()
-
-    // Reload when another tab changes storage
     window.addEventListener('storage', load)
-    return () => window.removeEventListener('storage', load)
-  }, [])
-
-  // Expose a way to refresh after a new run
-  useEffect(() => {
-    const handler = () => {
-      const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      setHistory(items)
+    window.addEventListener('pipeline_history_updated', load)
+    return () => {
+      window.removeEventListener('storage', load)
+      window.removeEventListener('pipeline_history_updated', load)
     }
-    window.addEventListener('pipeline_history_updated', handler)
-    return () => window.removeEventListener('pipeline_history_updated', handler)
   }, [])
 
   return (
     <aside
       style={{
-        width: '240px',
+        width: '260px',
         flexShrink: 0,
         borderRight: '1px solid var(--border)',
         background: 'var(--bg-secondary)',
@@ -76,37 +60,61 @@ export function Sidebar({ onSelectRun }) {
         overflow: 'hidden',
       }}
     >
-      {/* Logo area */}
-      <div
-        style={{
-          padding: '20px 16px 16px',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Brand */}
+      <div style={{ padding: '20px 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
           <div
             style={{
               width: '28px',
               height: '28px',
-              borderRadius: '7px',
-              background: 'var(--accent-gradient)',
+              borderRadius: '8px',
+              background: 'var(--accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '13px',
+              flexShrink: 0,
             }}
           >
-            ⬡
+            ◎
           </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              SpecGen
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
-              AI Multi-Agent
-            </div>
-          </div>
+          <span
+            style={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              letterSpacing: '-.015em',
+            }}
+          >
+            SpecGen
+          </span>
         </div>
+
+        {/* New run button */}
+        <button
+          onClick={onNewRun}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-secondary)',
+            padding: '7px 12px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            textAlign: 'left',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'background var(--duration-fast)',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <span style={{ fontSize: '16px', lineHeight: 1, color: 'var(--text-dim)' }}>+</span>
+          New run
+        </button>
       </div>
 
       {/* History */}
@@ -114,21 +122,35 @@ export function Sidebar({ onSelectRun }) {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '10px 0',
+          padding: '0 8px',
         }}
       >
-        {history.length === 0 ? (
+        {history.length > 0 && (
           <div
             style={{
-              padding: '20px 16px',
-              fontSize: '12px',
+              fontSize: '11px',
+              fontWeight: 600,
               color: 'var(--text-dim)',
-              textAlign: 'center',
-              lineHeight: 1.6,
+              letterSpacing: '.06em',
+              textTransform: 'uppercase',
+              padding: '4px 8px 6px',
             }}
           >
-            Your run history<br />will appear here.
+            Recent
           </div>
+        )}
+
+        {history.length === 0 ? (
+          <p
+            style={{
+              padding: '16px 8px',
+              fontSize: '13px',
+              color: 'var(--text-dim)',
+              lineHeight: 1.55,
+            }}
+          >
+            Your run history will appear here.
+          </p>
         ) : (
           history.map((entry) => (
             <button
@@ -139,31 +161,31 @@ export function Sidebar({ onSelectRun }) {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '9px 16px',
+                padding: '6px 8px',
                 textAlign: 'left',
+                borderRadius: 'var(--radius-md)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '2px',
-                borderRadius: 0,
-                transition: 'background 150ms',
+                gap: '1px',
+                transition: 'background var(--duration-fast)',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
             >
               <span
                 style={{
-                  fontSize: '12.5px',
+                  fontSize: '13px',
                   color: 'var(--text-secondary)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: '100%',
                   display: 'block',
+                  maxWidth: '100%',
                 }}
               >
                 {entry.preview}
               </span>
-              <span style={{ fontSize: '10.5px', color: 'var(--text-dim)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
                 {formatRelative(entry.timestamp)}
               </span>
             </button>
@@ -178,9 +200,10 @@ export function Sidebar({ onSelectRun }) {
           borderTop: '1px solid var(--border)',
           fontSize: '11px',
           color: 'var(--text-dim)',
+          letterSpacing: '.02em',
         }}
       >
-        4 specialised AI agents
+        Planner · Engineer · Cost Estimator · Writer
       </div>
     </aside>
   )
