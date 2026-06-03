@@ -266,8 +266,13 @@ export default function App() {
       {mode === 'chat' && (
         <ConversationSidebar
           conversations={convs.conversations}
-          groupedConversations={convs.groupedConversations}
+          filteredGroupedConversations={convs.filteredGroupedConversations}
           activeId={convs.activeId}
+          searchQuery={convs.searchQuery}
+          setSearchQuery={convs.setSearchQuery}
+          pinnedIds={convs.pinnedIds}
+          pin={convs.pin}
+          unpin={convs.unpin}
           onSelect={convs.selectConversation}
           onNew={async () => {
               try {

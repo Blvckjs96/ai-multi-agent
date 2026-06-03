@@ -116,31 +116,76 @@ export function useConversations() {
     }
   }, [])
 
+  // ── Search ─────────────────────────────────────────────────────────────────
+
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredConversations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return conversations
+    return conversations.filter((c) => c.title.toLowerCase().includes(q))
+  }, [conversations, searchQuery])
+
+  // ── Pin (localStorage) ─────────────────────────────────────────────────────
+
+  const [pinnedIds, setPinnedIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('argo_pinned_convs') ?? '[]'))
+    } catch {
+      return new Set()
+    }
+  })
+
+  const pin = useCallback((id) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      localStorage.setItem('argo_pinned_convs', JSON.stringify([...next]))
+      return next
+    })
+  }, [])
+
+  const unpin = useCallback((id) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      localStorage.setItem('argo_pinned_convs', JSON.stringify([...next]))
+      return next
+    })
+  }, [])
+
   // ── Grouping ───────────────────────────────────────────────────────────────
 
-  const groupedConversations = useMemo(() => {
+  function buildGroups(list) {
     const MS_PER_DAY = 86_400_000
     const now = new Date()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfYesterday = new Date(startOfToday - MS_PER_DAY)
     const startOfWeek = new Date(startOfToday - 6 * MS_PER_DAY)
-
     const groups = { today: [], yesterday: [], week: [], older: [] }
-
-    conversations.forEach((conv) => {
+    list.forEach((conv) => {
       const d = new Date(conv.createdAt)
       if (d >= startOfToday)          groups.today.push(conv)
       else if (d >= startOfYesterday) groups.yesterday.push(conv)
       else if (d >= startOfWeek)      groups.week.push(conv)
       else                            groups.older.push(conv)
     })
-
     return groups
-  }, [conversations])
+  }
+
+  const groupedConversations = useMemo(() => buildGroups(conversations), [conversations])
+  const filteredGroupedConversations = useMemo(() => buildGroups(filteredConversations), [filteredConversations])
 
   return {
     conversations,
+    filteredConversations,
     groupedConversations,
+    filteredGroupedConversations,
+    searchQuery,
+    setSearchQuery,
+    pinnedIds,
+    pin,
+    unpin,
     activeId,
     loading,
     error,
