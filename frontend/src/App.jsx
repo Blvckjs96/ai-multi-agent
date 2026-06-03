@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { API_ORIGIN } from './lib/api'
+import { useAppStore } from './store/index'
 
 // Pipeline mode
 import { AgentCard } from './components/AgentCard'
@@ -10,26 +12,23 @@ import { usePipeline } from './hooks/usePipeline'
 // Chat mode (standalone)
 import { ChatView } from './components/chat/ChatView'
 import { TerminalView } from './components/chat/TerminalView'
+import { CoworkerSelector } from './components/chat/CoworkerSelector'
 import { useChat, STATUS } from './hooks/useChat'
 
 // Panels
-import WikiPanel from './components/wiki/WikiPanel'
 import { ChironPanel } from './components/chiron/ChironPanel'
 import { ChangeTimeline } from './components/timeline/ChangeTimeline'
 import { GitHubPanel } from './components/github/GitHubPanel'
 import ProvidersPanel from './components/providers/ProvidersPanel'
-import ModelSelector from './components/providers/ModelSelector'
+import LocalModelSelector, { useLocalModel } from './components/providers/LocalModelSelector'
 import SettingsPanel from './components/settings/SettingsPanel'
-import ClaudeAuthStatus from './components/auth/ClaudeAuthStatus'
 import ArgorouterPanel from './components/argorouter/ArgorouterPanel'
 import CodegraphPanel from './components/codegraph/CodegraphPanel'
 
-// Argo 2-column layout
-import { IssueBoard } from './components/layout/IssueBoard'
-import { IssueWorkspace } from './components/layout/IssueWorkspace'
+// Argo IDE layout
+import { IdeLayout } from './components/layout/IdeLayout'
+import LoginPage from './components/auth/LoginPage'
 
-// Workspace tab management
-import { WorkspaceTabs } from './components/WorkspaceTabs'
 import { useWorkspace } from './hooks/useWorkspace'
 
 // New sidebar components
@@ -41,34 +40,75 @@ const AGENT_NAMES = ['planner', 'engineer', 'cost_estimator', 'writer']
 
 // ── Chat standalone panel ─────────────────────────────────────────────────────
 
-function ChatPanel({ workspaceId, activeConversationId }) {
-  const [view, setView] = useState('chat')
-  const chat = useChat()
+function ChatPanel({ workspaceId, activeConversationId, onLoadMessages }) {
+  const [view, setView]             = useState('chat')
+  const [coworkerId, setCoworkerId] = useState(null)
+  const chat = useChat(activeConversationId)
+  const localModel = useLocalModel()   // ArgoHarness local model override
+
+  // Load history when conversation changes
+  useEffect(() => {
+    if (!activeConversationId || !onLoadMessages) return
+    onLoadMessages(activeConversationId).then((msgs) => {
+      if (msgs.length > 0) chat.loadHistory(msgs)
+    })
+  }, [activeConversationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendWithWorkspace = useCallback(
-    (msg) => chat.send(msg, workspaceId),
-    [chat.send, workspaceId],
+    (msg) => chat.send(msg, workspaceId, coworkerId, localModel),
+    [chat.send, workspaceId, coworkerId, localModel],
   )
+
+  // Read selected files as text and send as context with the next message
+  const handleFileSelect = useCallback((files) => {
+    const file = files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result
+      if (typeof content !== 'string') return
+      const preview = content.slice(0, 6000)
+      const truncated = content.length > 6000 ? `\n…(truncated, ${content.length} chars total)` : ''
+      const msg = `[File context: ${file.name}]\n\`\`\`\n${preview}${truncated}\n\`\`\``
+      chat.send(msg, workspaceId, coworkerId, localModel)
+    }
+    reader.readAsText(file)
+  }, [chat, workspaceId, coworkerId, localModel])
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
       <div style={{ borderBottom: '1px solid var(--border)', padding: '7px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(10,10,11,0.85)', backdropFilter: 'blur(12px)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {chat.sessionId && <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{chat.sessionId.slice(0, 8)}…</span>}
-          {chat.status === STATUS.PLANNING && <span style={{ fontSize: 11, color: 'var(--accent-cyan)' }}>planning</span>}
+          {chat.status === STATUS.PLANNING  && <span style={{ fontSize: 11, color: 'var(--accent-cyan)' }}>planning</span>}
           {chat.status === STATUS.EXECUTING && <span style={{ fontSize: 11, color: 'var(--accent-green)' }}>executing</span>}
+          {workspaceId && (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block' }} />
+              repo active
+            </span>
+          )}
+          {chat.stats?.costUsd > 0 && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--f-mono)' }}>
+              ${chat.stats.costUsd.toFixed(4)}
+            </span>
+          )}
         </div>
-        <div style={{ display: 'inline-flex', background: 'var(--bg-elevated)', borderRadius: 8, padding: 2, border: '1px solid var(--border)', gap: 1 }}>
-          {['chat', 'terminal'].map((v) => (
-            <button key={v} onClick={() => setView(v)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 500, border: 0, padding: '3px 10px', borderRadius: 6, cursor: 'pointer', background: view === v ? 'var(--bg-overlay)' : 'transparent', color: view === v ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 120ms', textTransform: 'capitalize' }}>
-              {v}
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LocalModelSelector compact />
+          <CoworkerSelector value={coworkerId} onChange={setCoworkerId} />
+          <div style={{ display: 'inline-flex', background: 'var(--bg-elevated)', borderRadius: 8, padding: 2, border: '1px solid var(--border)', gap: 1 }}>
+            {['chat', 'terminal'].map((v) => (
+              <button key={v} onClick={() => setView(v)} style={{ fontFamily: 'inherit', fontSize: 11, fontWeight: 500, border: 0, padding: '3px 10px', borderRadius: 6, cursor: 'pointer', background: view === v ? 'var(--bg-overlay)' : 'transparent', color: view === v ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'all 120ms', textTransform: 'capitalize' }}>
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <div style={{ flex: 1, display: view === 'chat' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
-          <ChatView messages={chat.messages} status={chat.status} error={chat.error} activeTools={chat.activeTools} stats={chat.stats} onSend={sendWithWorkspace} onConfirm={chat.confirm} onCancel={chat.cancel} onReset={chat.reset} workspaceId={workspaceId} />
+          <ChatView messages={chat.messages} status={chat.status} error={chat.error} activeTools={chat.activeTools} stats={chat.stats} onSend={sendWithWorkspace} onConfirm={chat.confirm} onCancel={chat.cancel} onReset={chat.reset} onFileSelect={handleFileSelect} workspaceId={workspaceId} />
         </div>
         <div style={{ flex: 1, display: view === 'terminal' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
           <TerminalView events={chat.rawEvents} />
@@ -157,37 +197,6 @@ function PipelinePanel() {
   )
 }
 
-// ── Tasks 2-column layout ─────────────────────────────────────────────────────
-
-function TasksLayout({ workspaceId }) {
-  const [selectedTask, setSelectedTask] = useState(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  const handleSelect = useCallback((task) => {
-    setSelectedTask(task)
-  }, [])
-
-  const handleTaskRefresh = useCallback(() => {
-    setRefreshKey((k) => k + 1)
-  }, [])
-
-  return (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-      <IssueBoard
-        key={refreshKey}
-        workspaceId={workspaceId}
-        selectedId={selectedTask?.id}
-        onSelect={handleSelect}
-      />
-      <IssueWorkspace
-        task={selectedTask}
-        workspaceId={workspaceId}
-        onTaskRefresh={handleTaskRefresh}
-      />
-    </div>
-  )
-}
-
 // ── Status bar ────────────────────────────────────────────────────────────────
 
 function StatusBar({ mode }) {
@@ -217,9 +226,25 @@ function StatusBar({ mode }) {
 
 export default function App() {
   const [mode, setMode] = useState('tasks')
+  const [authed, setAuthed] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) { setAuthChecking(false); return }
+    fetch(`${API_ORIGIN}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => { if (r.ok) setAuthed(true); else localStorage.removeItem('token') })
+      .catch(() => {})
+      .finally(() => setAuthChecking(false))
+  }, [])
   const ws = useWorkspace()
   const convs = useConversations()
   const workspaceId = ws.activeId
+
+  if (authChecking) return null
+  if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />
 
   return (
     <div
@@ -234,7 +259,12 @@ export default function App() {
           groupedConversations={convs.groupedConversations}
           activeId={convs.activeId}
           onSelect={convs.selectConversation}
-          onNew={() => convs.createConversation('New conversation')}
+          onNew={async () => {
+              try {
+                const newConv = await convs.createConversation('New conversation')
+                convs.selectConversation(newConv.id)
+              } catch { /* non-fatal if backend down */ }
+            }}
           onRename={convs.renameConversation}
           onDelete={convs.deleteConversation}
         />
@@ -242,36 +272,15 @@ export default function App() {
 
       {/* Main content column */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        {/* Top bar: workspace tabs + model selector + auth */}
-        <div style={{ height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <WorkspaceTabs
-              openWorkspaces={ws.openWorkspaces}
-              activeId={ws.activeId}
-              all={ws.all}
-              openIds={ws.openIds}
-              onSwitch={ws.switchWorkspace}
-              onClose={ws.closeWorkspace}
-              onCreate={ws.createWorkspace}
-              onOpen={ws.openWorkspace}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', borderLeft: '1px solid var(--border)', flexShrink: 0 }}>
-            <ModelSelector compact />
-            <span style={{ color: 'var(--border)', fontSize: 14 }}>|</span>
-            <ClaudeAuthStatus />
-          </div>
-        </div>
 
         {/* Content area */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          {mode === 'tasks'       && <TasksLayout workspaceId={workspaceId} />}
-          {mode === 'chat'        && <ChatPanel workspaceId={workspaceId} activeConversationId={convs.activeId} />}
+          {mode === 'tasks'       && <IdeLayout workspaceId={workspaceId} createWorkspace={ws.createWorkspace} workspacePath={ws.activeWorkspace?.path ?? null} workspaceName={ws.activeWorkspace?.name ?? null} branchName={null} />}
+          {mode === 'chat'        && <ChatPanel key={convs.activeId ?? 'no-conv'} workspaceId={workspaceId} activeConversationId={convs.activeId} onLoadMessages={convs.loadMessages} />}
           {mode === 'pipeline'    && <PipelinePanel />}
           {mode === 'chiron'      && <ChironPanel workspaceId={workspaceId} />}
-          {mode === 'wiki'        && <WikiPanel workspaceId={workspaceId} />}
           {mode === 'argorouter'  && <ArgorouterPanel />}
-          {mode === 'codegraph'   && <CodegraphPanel workspaceId={workspaceId} repoPath={ws.activeWorkspace?.repo_path ?? null} />}
+          {mode === 'codegraph'   && <CodegraphPanel workspaceId={workspaceId} repoPath={ws.activeWorkspace?.path ?? null} />}
           {mode === 'timeline'    && <ChangeTimeline workspaceId={workspaceId} />}
           {mode === 'github'      && <GitHubPanel />}
           {mode === 'providers'   && <ProvidersPanel />}
