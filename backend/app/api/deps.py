@@ -79,7 +79,7 @@ def get_file_upload_service(db: DBSession) -> FileUploadService:
 FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
 # === Authentication Dependencies ===
 
-from app.core.exceptions import AuthenticationError, AuthorizationError
+from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 from app.db.models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
@@ -112,7 +112,11 @@ async def get_current_user(
     if user_id is None:
         raise AuthenticationError(message="Invalid token payload")
 
-    user = await user_service.get_by_id(UUID(user_id))
+    try:
+        user = await user_service.get_by_id(UUID(user_id))
+    except NotFoundError:
+        raise AuthenticationError(message="Invalid or expired token")
+
     if not user.is_active:
         raise AuthenticationError(message="User account is disabled")
 
@@ -320,3 +324,26 @@ def require_permission(permission: str):
     permissions to any authenticated user; `permission` is not enforced.
     """
     return Depends(get_current_user)
+
+
+def permission_checker(permission_key: str):
+    """
+    FastAPI dependency factory for group-based permission checks.
+    Raises AuthorizationError (403) if the authenticated user lacks the permission.
+
+    Usage:
+        @router.post("/kb", dependencies=[Depends(permission_checker("workspace.knowledge.create"))])
+
+    Permission keys use dot notation matching DEFAULT_USER_PERMISSIONS structure.
+    """
+    from app.core.permissions import has_permission as _has_permission
+
+    async def _check(user: CurrentUser, db: DBSession) -> None:
+        ok = await _has_permission(str(user.id), permission_key, db)
+        if not ok:
+            raise AuthorizationError(
+                message=f"Permission '{permission_key}' required",
+                details={"permission": permission_key},
+            )
+
+    return Depends(_check)

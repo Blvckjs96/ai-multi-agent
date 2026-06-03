@@ -4,7 +4,7 @@ import secrets
 import uuid
 from enum import StrEnum
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,10 +17,12 @@ class UserRole(StrEnum):
     Roles hierarchy (higher includes lower permissions):
     - ADMIN: Full system access, can manage users and settings
     - USER: Standard user access
+    - PENDING: Registered but not yet approved by an admin
     """
 
     ADMIN = "admin"
     USER = "user"
+    PENDING = "pending"
 
 
 class User(Base, TimestampMixin):
@@ -38,9 +40,16 @@ class User(Base, TimestampMixin):
     mcp_token: Mapped[str | None] = mapped_column(
         String(255), unique=True, nullable=True, index=True
     )
+    api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    profile_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     @staticmethod
     def generate_mcp_token() -> str:
+        return secrets.token_hex(32)
+
+    @staticmethod
+    def generate_api_key() -> str:
         return secrets.token_hex(32)
 
     @property
