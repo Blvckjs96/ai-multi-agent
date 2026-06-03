@@ -15,6 +15,8 @@ window.fetch = (input, init = {}) => {
   return _nativeFetch(input, init)
 }
 
+document.documentElement.classList.add('dark')
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
