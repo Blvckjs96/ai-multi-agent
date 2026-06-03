@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@config "../tailwind.config.js";
 
 /* ===========================================================
    Argo — Design Tokens (dark luxury developer tool)
@@ -32,6 +34,23 @@
   --accent-grad-soft: linear-gradient(135deg, rgba(0,212,255,0.18) 0%, rgba(0,255,157,0.18) 100%);
   --accent-glow: 0 0 20px rgba(0, 212, 255, 0.25);
   --accent-glow-strong: 0 0 32px rgba(0, 212, 255, 0.35), 0 0 12px rgba(0, 255, 157, 0.25);
+
+  /* Extended accents */
+  --accent-purple: #a78bfa;
+  --accent-amber:  #f59e0b;
+
+  /* Provider brand colors */
+  --provider-claude:    #cc785c;
+  --provider-ollama:    #6366f1;
+  --provider-nim:       #76b900;
+  --provider-anthropic: #cc785c;
+
+  /* Terminal event colors */
+  --terminal-tool-result: #a78bfa;
+  --terminal-result:      #fbbf24;
+  --terminal-thinking:    #6ee7b7;
+  --terminal-dim:         #888;
+  --terminal-default:     #ccc;
 
   /* Legacy accent alias */
   --accent:      var(--accent-cyan);
@@ -285,6 +304,18 @@ body {
 .tok-num { color: #fb923c; }
 .tok-tag { color: #ff7d92; }
 
+/* ── Focus visible — keyboard nav indicator ─────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* ── Animations ─────────────────────────────────────────────── */
 
 @keyframes pulse-dot {
@@ -413,4 +444,57 @@ body {
 @keyframes argo-fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Entrance animations ────────────────────────────────────── */
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Agent status animations ────────────────────────────────── */
+
+@keyframes busy-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,212,255,0.2), 0 0 14px rgba(0,212,255,0.10); }
+  50%      { box-shadow: 0 0 0 1px rgba(0,212,255,0.4), 0 0 28px rgba(0,212,255,0.22); }
+}
+
+@keyframes waiting-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,255,157,0.2), 0 0 14px rgba(0,255,157,0.10); }
+  50%      { box-shadow: 0 0 0 1px rgba(0,255,157,0.4), 0 0 28px rgba(0,255,157,0.22); }
+}
+
+@keyframes status-beat {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0.6; }
+}
+
+.lane-busy    { animation: busy-glow    2.4s ease-in-out infinite; }
+.lane-waiting { animation: waiting-glow 1.8s ease-in-out infinite; }
+.lane-beat    { animation: status-beat  1.2s ease-in-out infinite; }
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
