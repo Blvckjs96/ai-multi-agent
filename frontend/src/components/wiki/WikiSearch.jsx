@@ -20,7 +20,7 @@ const s = {
   },
   icon: { fontSize: '16px', color: 'var(--text-dim)', flexShrink: 0 },
   input: {
-    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+    flex: 1, background: 'transparent', border: 'none', 
     fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'var(--f-ui)',
   },
   badge: {

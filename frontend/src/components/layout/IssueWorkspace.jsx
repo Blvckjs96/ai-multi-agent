@@ -60,7 +60,7 @@ function DescriptionTab({ task, workspaceId, onRefresh }) {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            style={{ fontSize: 16, fontWeight: 600, background: 'var(--bg-overlay)', border: '1px solid var(--border-active)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit' }}
+            style={{ fontSize: 16, fontWeight: 600, background: 'var(--bg-overlay)', border: '1px solid var(--border-active)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)',  fontFamily: 'inherit' }}
           />
           <select
             value={step}
@@ -74,7 +74,7 @@ function DescriptionTab({ task, workspaceId, onRefresh }) {
             onChange={(e) => setDesc(e.target.value)}
             rows={8}
             placeholder="Describe this issue…"
-            style={{ resize: 'vertical', background: 'var(--bg-overlay)', border: '1px solid var(--border-active)', borderRadius: 8, padding: '10px 12px', color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit' }}
+            style={{ resize: 'vertical', background: 'var(--bg-overlay)', border: '1px solid var(--border-active)', borderRadius: 8, padding: '10px 12px', color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.6,  fontFamily: 'inherit' }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={save} style={{ background: 'var(--accent-grad)', color: '#001218', border: 'none', borderRadius: 8, padding: '7px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
@@ -202,10 +202,17 @@ function MetaTab({ task }) {
 
 // ── IssueWorkspace root ───────────────────────────────────────────────────────
 
-export function IssueWorkspace({ task, workspaceId, onTaskRefresh }) {
+export function IssueWorkspace({
+  task,
+  cwd,
+  worktreePath,
+  workspacePath,
+  workspaceId,
+  onTaskRefresh,
+  onStatusChange,
+}) {
   const [tab, setTab] = useState('terminal')
-  const chat = useChat()
-  const { session } = useTaskSession(task?.id, workspaceId)
+  const chat = useChat(task?.id ?? null)
 
   const sendWithContext = useCallback(
     (msg) => chat.send(msg, workspaceId),
@@ -214,61 +221,56 @@ export function IssueWorkspace({ task, workspaceId, onTaskRefresh }) {
 
   if (!task) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: 'var(--text-muted)' }}>
-        <LayoutDashboard size={32} style={{ opacity: 0.4 }} />
-        <span style={{ fontSize: 12 }}>Select an issue to get started</span>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 10, color: 'var(--text-muted)',
+        animation: 'fade-up 200ms var(--ease-out) both',
+      }}>
+        <LayoutDashboard size={36} strokeWidth={1} style={{ opacity: 0.25 }} />
+        <span style={{ fontSize: 12 }}>Select a task to open its workspace</span>
       </div>
     )
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+    <div
+      key={task.id}
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        overflow: 'hidden', minWidth: 0,
+        animation: 'scale-in 160ms var(--ease-out) both',
+      }}
+    >
       {/* Tab bar */}
-      <div
-        style={{
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
+      <div style={{
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-surface)',
+        display: 'flex', alignItems: 'center',
+        padding: '0 16px', flexShrink: 0, gap: 2, height: 38,
+      }}>
+        {/* Task title */}
+        <span style={{
+          fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
+          maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          marginRight: 10, paddingRight: 10, borderRight: '1px solid var(--border)',
           flexShrink: 0,
-          gap: 2,
-        }}
-      >
-        {/* Issue title in tab bar */}
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'var(--text-primary)',
-            maxWidth: 200,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            marginRight: 12,
-            paddingRight: 12,
-            borderRight: '1px solid var(--border)',
-          }}
-        >
+        }}>
           {task.title}
         </span>
 
         {TABS.map((t) => (
           <button
             key={t.id}
+            type="button"
             onClick={() => setTab(t.id)}
             style={{
-              background: 'transparent',
-              border: 'none',
+              background: 'transparent', border: 'none',
               borderBottom: tab === t.id ? '2px solid var(--accent-cyan)' : '2px solid transparent',
-              padding: '10px 12px 8px',
-              fontSize: 12,
-              fontWeight: tab === t.id ? 600 : 400,
+              padding: '10px 10px 8px',
+              fontSize: 11, fontWeight: tab === t.id ? 600 : 400,
               color: tab === t.id ? 'var(--accent-cyan)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'color 120ms',
-              flexShrink: 0,
+              cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'color 120ms', flexShrink: 0,
             }}
           >
             {t.label}
@@ -279,7 +281,15 @@ export function IssueWorkspace({ task, workspaceId, onTaskRefresh }) {
       {/* Tab content */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {tab === 'terminal' && (
-          <TerminalTab key={task.id} taskId={task.id} cwd={task.cwd} />
+          <TerminalTab
+            key={task.id}
+            taskId={task.id}
+            task={task}
+            cwd={cwd ?? workspacePath ?? undefined}
+            worktreePath={worktreePath ?? undefined}
+            workspacePath={workspacePath ?? undefined}
+            onStatusChange={onStatusChange}
+          />
         )}
         {tab === 'chat' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

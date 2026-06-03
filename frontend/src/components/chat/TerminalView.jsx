@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react'
 
 const TYPE_COLOR = {
-  system: '#888',
-  assistant: '#00ff9d',
-  tool_use: '#00d4ff',
-  tool_result: '#a78bfa',
-  result: '#fbbf24',
-  error: '#f87171',
-  done: '#888',
-  heartbeat: '#333',
-  thinking: '#6ee7b7',
+  system:      'var(--terminal-dim)',
+  assistant:   'var(--accent-green)',
+  tool_use:    'var(--accent-cyan)',
+  tool_result: 'var(--terminal-tool-result)',
+  result:      'var(--terminal-result)',
+  error:       'var(--status-error)',
+  done:        'var(--terminal-dim)',
+  heartbeat:   'var(--text-faint)',
+  thinking:    'var(--terminal-thinking)',
 }
 
 export function TerminalView({ events }) {
@@ -42,7 +42,7 @@ export function TerminalView({ events }) {
       }}
     >
       {events.length === 0 && (
-        <span style={{ color: '#444' }}>{'// stream events will appear here'}</span>
+        <span style={{ color: 'var(--text-faint)' }}>{'// stream events will appear here'}</span>
       )}
       {events.map((evt, i) => (
         <TerminalLine key={i} event={evt} />
@@ -54,7 +54,7 @@ export function TerminalView({ events }) {
 }
 
 function TerminalLine({ event }) {
-  const color = TYPE_COLOR[event.type] || '#ccc'
+  const color = TYPE_COLOR[event.type] || 'var(--terminal-default)'
   const timestamp = new Date().toISOString().slice(11, 23)
 
   const summary = formatEvent(event)
@@ -62,9 +62,9 @@ function TerminalLine({ event }) {
 
   return (
     <div style={{ marginBottom: '2px' }}>
-      <span style={{ color: '#444', userSelect: 'none' }}>{timestamp} </span>
+      <span style={{ color: 'var(--text-faint)', userSelect: 'none' }}>{timestamp} </span>
       <span style={{ color, fontWeight: 600 }}>[{event.type}]</span>
-      <span style={{ color: '#ccc' }}> {summary}</span>
+      <span style={{ color: 'var(--terminal-default)' }}> {summary}</span>
     </div>
   )
 }

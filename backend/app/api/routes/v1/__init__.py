@@ -24,6 +24,7 @@ from app.api.routes.v1 import provider_configs
 from app.api.routes.v1 import settings
 from app.api.routes.v1 import codegraph
 from app.api.routes.v1 import argorouter
+from app.api.routes.v1 import coworkers
 
 # Argon knowledge-base modules
 from app.argon.api import (
@@ -116,6 +117,9 @@ v1_router.include_router(settings.router)
 # Codegraph — per-workspace code-intelligence MCP servers
 v1_router.include_router(codegraph.router)
 v1_router.include_router(argorouter.router)
+
+# AI coworker personas
+v1_router.include_router(coworkers.router)
 
 # ---------------------------------------------------------------------------
 # Argon — knowledge-base engine (wiki, sources, MRP, skills, RBAC, admin)

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Check } from 'lucide-react'
 import ModelSelector from '../providers/ModelSelector'
+import { apiFetch } from '../../lib/api'
 
 // ── Section wrapper ────────────────────────────────────────────────────────────
 
@@ -112,7 +114,7 @@ function CopyCmd({ cmd }) {
           flexShrink: 0,
         }}
       >
-        {copied ? '✓ Copied' : 'Copy'}
+        {copied ? <><Check size={11} style={{ verticalAlign: 'middle' }} /> Copied</> : 'Copy'}
       </button>
     </div>
   )
@@ -130,7 +132,7 @@ export default function SettingsPanel() {
   const fetchAuth = useCallback(async () => {
     setAuthLoading(true)
     try {
-      const res = await fetch('/api/v1/settings/claude-auth/status')
+      const res = await apiFetch('/api/v1/settings/claude-auth/status')
       if (res.ok) setClaudeAuth(await res.json())
     } catch { /* silent */ } finally {
       setAuthLoading(false)
@@ -139,7 +141,7 @@ export default function SettingsPanel() {
 
   const fetchSys = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/settings/system')
+      const res = await apiFetch('/api/v1/settings/system')
       if (res.ok) setSysInfo(await res.json())
     } catch { /* silent */ }
   }, [])
@@ -153,7 +155,7 @@ export default function SettingsPanel() {
     setLoginLoading(true)
     setLoginMsg(null)
     try {
-      const res = await fetch('/api/v1/settings/claude-auth/login', { method: 'POST' })
+      const res = await apiFetch('/api/v1/settings/claude-auth/login', { method: 'POST' })
       const data = await res.json()
       setLoginMsg(data.ok ? { type: 'success', text: data.message } : { type: 'error', text: data.error })
       if (data.ok) setTimeout(fetchAuth, 4000)
@@ -175,6 +177,7 @@ export default function SettingsPanel() {
         flexDirection: 'column',
         background: 'var(--bg-base)',
         overflow: 'hidden',
+        animation: 'scale-in 180ms var(--ease-out) both',
       }}
     >
       {/* Header */}

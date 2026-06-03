@@ -13,7 +13,7 @@ const TABS = [
 const s = {
   root: {
     display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
-    background: 'var(--bg-primary)',
+    background: 'var(--bg-primary)', animation: 'scale-in 180ms var(--ease-out) both',
   },
   header: { padding: '12px 16px 0', flexShrink: 0 },
   titleRow: {

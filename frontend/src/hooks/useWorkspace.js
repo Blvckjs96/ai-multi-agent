@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../lib/api'
 
 const OPEN_KEY   = 'argo:open-workspaces'
 const ACTIVE_KEY = 'argo:active-workspace'
@@ -13,7 +14,7 @@ export function useWorkspace() {
   const [activeId, setActiveId] = useState(() => localStorage.getItem(ACTIVE_KEY) ?? null)
 
   const reload = useCallback(() => {
-    fetch('/api/v1/workspaces')
+    apiFetch('/api/v1/workspaces')
       .then((r) => r.json())
       .then((ws) => {
         setAll(ws)
@@ -59,7 +60,7 @@ export function useWorkspace() {
   const switchWorkspace = useCallback((id) => { setActiveId(id) }, [])
 
   const createWorkspace = useCallback(async (name, path, description) => {
-    const res = await fetch('/api/v1/workspaces', {
+    const res = await apiFetch('/api/v1/workspaces', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ name, path, description }),

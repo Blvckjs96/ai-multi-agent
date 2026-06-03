@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Zap, ChevronDown, ChevronRight } from 'lucide-react'
+import { Zap, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
 const containerStyle = {
@@ -30,11 +30,11 @@ const dotStyles = {
 
 const dotBase = { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 }
 
-const statusText = {
-  pending: '—',
-  running: 'running…',
-  done: (duration) => `✓${duration ? ` ${duration}` : ''}`,
-  error: '✗',
+const StatusIcon = ({ status, duration }) => {
+  if (status === 'done') return <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--status-success)' }}><Check size={11} strokeWidth={2.5} />{duration && <span style={{ fontSize: 11 }}>{duration}</span>}</span>
+  if (status === 'error') return <X size={11} strokeWidth={2.5} style={{ color: 'var(--status-error)' }} />
+  if (status === 'running') return <span style={{ fontSize: 12, fontStyle: 'italic' }}>running…</span>
+  return <span style={{ fontSize: 12 }}>—</span>
 }
 
 const statusColor = {
@@ -63,8 +63,8 @@ function StepRow({ step, expanded, onToggle }) {
       >
         <span style={{ ...dotBase, ...dotStyles[step.status] }} />
         <span style={{ fontSize: 12, color: nameColor, flex: 1 }}>{step.name}</span>
-        <span style={{ fontSize: 12, color: statusColor[step.status], fontStyle: step.status === 'running' ? 'italic' : 'normal' }}>
-          {typeof statusText[step.status] === 'function' ? statusText[step.status](step.duration) : statusText[step.status]}
+        <span style={{ display: 'flex', alignItems: 'center', color: statusColor[step.status] }}>
+          <StatusIcon status={step.status} duration={step.duration} />
         </span>
         {hasResult && (
           <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>

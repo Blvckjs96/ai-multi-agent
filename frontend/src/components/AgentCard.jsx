@@ -1,3 +1,5 @@
+import { Check, ArrowRight } from 'lucide-react'
+
 const AGENT_META = {
   planner: {
     label: 'Planner',
@@ -53,7 +55,7 @@ function StatusDot({ status }) {
         />
       )}
       {status === 'done' && (
-        <span style={{ fontSize: '10px', fontWeight: 700 }}>✓</span>
+        <Check size={11} strokeWidth={2.5} style={{ color: 'var(--success)' }} />
       )}
       {s.label}
     </span>
@@ -146,7 +148,7 @@ function EngineerResult({ result }) {
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {result.keyDecisions.map((d, i) => (
               <li key={i} style={{ fontSize: '12.5px', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
-                <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }}>→</span>
+                <ArrowRight size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                 {d}
               </li>
             ))}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, FolderOpen } from 'lucide-react'
+import { Plus, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
 import { IssueRow } from './IssueRow'
 
 const API = '/api/v1/tasks'
@@ -90,11 +90,10 @@ function StepSection({ step, tasks, workspaceId, selectedId, onSelect, onDelete,
   return (
     <div>
       {/* Section header */}
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed((c) => !c)}
-        onKeyDown={(e) => e.key === 'Enter' && setCollapsed((c) => !c)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -102,19 +101,18 @@ function StepSection({ step, tasks, workspaceId, selectedId, onSelect, onDelete,
           padding: '5px 10px',
           cursor: 'pointer',
           userSelect: 'none',
+          background: 'none',
+          border: 'none',
+          width: '100%',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          outline: 'none',
         }}
       >
-        <span
-          style={{
-            fontSize: 9,
-            color: 'var(--text-muted)',
-            transform: collapsed ? 'rotate(-90deg)' : 'none',
-            transition: 'transform 150ms',
-            display: 'inline-block',
-          }}
-        >
-          ▾
-        </span>
+        {collapsed
+          ? <ChevronRight size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          : <ChevronDown size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        }
         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: step.color }}>
           {step.label}
         </span>
@@ -130,7 +128,7 @@ function StepSection({ step, tasks, workspaceId, selectedId, onSelect, onDelete,
         >
           {tasks.length}
         </span>
-      </div>
+      </button>
 
       {/* Issues list */}
       {!collapsed && (
@@ -151,7 +149,7 @@ function StepSection({ step, tasks, workspaceId, selectedId, onSelect, onDelete,
   )
 }
 
-export function IssueBoard({ workspaceId, selectedId, onSelect }) {
+export function IssueBoard({ workspaceId, selectedId, onSelect, onAddFolder, refreshKey }) {
   const [tasks, setTasks] = useState([])
 
   const load = useCallback(() => {
@@ -162,7 +160,7 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
       .catch(() => {})
   }, [workspaceId])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [load, refreshKey])
 
   const handleDelete = useCallback(async (id) => {
     await fetch(`${API}/${id}`, { method: 'DELETE' }).catch(() => {})
@@ -183,7 +181,7 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
           No repository folder selected
         </span>
         <button
-          onClick={() => {}}
+          onClick={onAddFolder}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -250,10 +248,10 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
         ))}
       </div>
 
-      {/* FAB Button */}
+      {/* Footer — add workspace */}
       <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
         <button
-          onClick={() => {}}
+          onClick={onAddFolder}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -261,17 +259,17 @@ export function IssueBoard({ workspaceId, selectedId, onSelect }) {
             padding: '6px 16px',
             borderRadius: 9999,
             background: 'transparent',
-            border: '1px solid var(--accent-cyan)',
-            color: 'var(--accent-cyan)',
-            fontSize: 12,
-            fontWeight: 600,
+            border: '1px solid var(--border-active)',
+            color: 'var(--text-muted)',
+            fontSize: 11,
+            fontWeight: 500,
             cursor: 'pointer',
             letterSpacing: '-0.01em',
             fontFamily: 'inherit',
           }}
         >
-          <Plus size={13} strokeWidth={2.2} />
-          Add Repository Folder
+          <FolderOpen size={12} strokeWidth={1.8} />
+          New Workspace
         </button>
       </div>
     </div>

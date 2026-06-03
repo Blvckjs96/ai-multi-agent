@@ -1,10 +1,10 @@
 import ModelHealthRow from './ModelHealthRow'
 
 const PROVIDER_META = {
-  claude_cli: { label: 'Claude Code CLI', color: '#cc785c', desc: 'Pro/Max subscription • Local' },
-  ollama: { label: 'Ollama', color: '#6366f1', desc: 'Local inference • No API key' },
-  anthropic: { label: 'Anthropic API', color: '#cc785c', desc: 'Pay-per-token • Cloud' },
-  nim: { label: 'NVIDIA NIM', color: '#76b900', desc: 'Free tier • Cloud • Rate-limited' },
+  claude_cli: { label: 'Claude Code CLI', color: 'var(--provider-claude)',    desc: 'Pro/Max subscription • Local' },
+  ollama:     { label: 'Ollama',          color: 'var(--provider-ollama)',    desc: 'Local inference • No API key' },
+  anthropic:  { label: 'Anthropic API',   color: 'var(--provider-anthropic)', desc: 'Pay-per-token • Cloud' },
+  nim:        { label: 'NVIDIA NIM',      color: 'var(--provider-nim)',       desc: 'Free tier • Cloud • Rate-limited' },
 }
 
 function getProviderModels(providerId, modelLocks) {

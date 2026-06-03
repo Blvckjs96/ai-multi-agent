@@ -56,7 +56,7 @@ export default function ConversationSidebar({
   }
 
   const s = {
-    root: { width: 200, minWidth: 200, height: '100%', background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 },
+    root: { width: 200, minWidth: 200, height: '100%', background: 'var(--bg-surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, animation: 'slide-in-left 200ms var(--ease-out) both' },
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' },
     scroll: { flex: 1, overflowY: 'auto' },
     groupLabel: { fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '8px 12px 4px' },
@@ -92,21 +92,14 @@ export default function ConversationSidebar({
                 const menuOpen = conv.id === menuOpenId
                 const editing = conv.id === editingId
                 return (
-                  <div
+                  <button
                     key={conv.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-current={active ? 'true' : undefined}
-                    style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '7px 12px', cursor: 'pointer', borderLeft: active ? '2px solid var(--accent-cyan)' : '2px solid transparent', background: active ? 'rgba(0,212,255,.08)' : hovered ? 'var(--bg-elevated)' : 'transparent', color: active ? 'var(--accent-cyan)' : 'var(--text-secondary)', userSelect: 'none' }}
+                    type="button"
+                    aria-current={active ? 'page' : undefined}
+                    style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '7px 12px', cursor: 'pointer', borderLeft: active ? '2px solid var(--accent-cyan)' : '2px solid transparent', background: active ? 'rgba(0,212,255,.08)' : hovered ? 'var(--bg-elevated)' : 'transparent', color: active ? 'var(--accent-cyan)' : 'var(--text-secondary)', userSelect: 'none', width: '100%', border: 'none', outline: 'none', textAlign: 'left', fontFamily: 'inherit' }}
                     onMouseEnter={() => setHoveredId(conv.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => !editing && onSelect?.(conv.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        if (!editing) onSelect?.(conv.id)
-                      }
-                    }}
                     onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(conv.id) }}
                   >
                     {editing ? (
@@ -117,7 +110,7 @@ export default function ConversationSidebar({
                         onKeyDown={(e) => handleKey(e, conv.id)}
                         onBlur={(e) => commitEdit(conv.id, e.currentTarget.value)}
                         onClick={(e) => e.stopPropagation()}
-                        style={{ flex: 1, fontSize: 12, background: 'var(--bg-elevated)', border: '1px solid var(--accent-cyan)', borderRadius: 3, color: 'var(--text-primary)', padding: '1px 4px', outline: 'none', minWidth: 0 }}
+                        style={{ flex: 1, fontSize: 12, background: 'var(--bg-elevated)', border: '1px solid var(--accent-cyan)', borderRadius: 3, color: 'var(--text-primary)', padding: '1px 4px', minWidth: 0 }}
                       />
                     ) : (
                       <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{conv.title}</span>
@@ -148,14 +141,21 @@ export default function ConversationSidebar({
                         >Delete</button>
                       </div>
                     )}
-                  </div>
+                  </button>
                 )
               })}
             </div>
           )
         })}
         {!conversations.length && (
-          <div style={{ padding: '16px 12px', fontSize: 12, color: 'var(--text-muted)' }}>No conversations yet</div>
+          <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto 8px', display: 'block' }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+              No conversations yet.<br />Start a new chat to begin.
+            </p>
+          </div>
         )}
       </div>
     </aside>

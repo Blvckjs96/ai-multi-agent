@@ -1,6 +1,14 @@
 
 # Backend development configuration
 # Usage: docker-compose up -d
+#
+# ARGO DEV WORKFLOW NOTE:
+# The 'app' service (Docker backend) is NOT used in the argo-dev workflow.
+# Argo spawns the claude CLI via subprocess — that macOS binary cannot run
+# inside a Linux Docker container, so FastAPI must run on the host.
+# Use 'make argo-dev' which runs infra in Docker + FastAPI locally.
+# The 'app' service is in the 'full' profile — start it only for non-Argo testing:
+#   docker compose --profile full up -d
 
 services:
   app:
@@ -9,6 +17,7 @@ services:
       dockerfile: Dockerfile
     image: ai_multi_agent_backend:dev
     container_name: ai_multi_agent_backend
+    profiles: ["full"]
     ports:
       - "8007:8000"
     volumes:
@@ -43,9 +52,9 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-ai_multi_agent}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Port exposed only for local development - remove in production
+    # Port 5434: avoids conflict with EDB PostgreSQL (5432) and Homebrew PostgreSQL (5433)
     ports:
-      - "5433:5432"
+      - "5434:5432"
     networks:
       - backend
     healthcheck:
@@ -102,8 +111,6 @@ services:
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
       db:
@@ -131,8 +138,6 @@ services:
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -159,8 +164,6 @@ services:
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
     restart: unless-stopped

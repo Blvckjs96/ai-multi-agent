@@ -16,7 +16,7 @@ const s = {
     borderRadius: 'var(--radius-sm)', padding: '5px 10px',
   },
   searchInput: {
-    background: 'transparent', border: 'none', outline: 'none',
+    background: 'transparent', border: 'none', 
     fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'var(--f-ui)', flex: 1,
   },
   uploadBtn: {

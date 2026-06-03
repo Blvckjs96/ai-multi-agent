@@ -149,6 +149,48 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma4:31b-cloud"
 
+    # === Local AI Agent ===
+    OLLAMA_CHAT_MODEL: str = "qwen2.5-coder:3b"    # legacy alias — prefer OLLAMA_TIER1_MODEL
+    OLLAMA_PLAN_MODEL: str = "qwen2.5-coder:3b"    # legacy alias — prefer OLLAMA_TIER0_MODEL
+    LOCAL_CONTEXT_TOKENS: int = 6_000              # RAG + memory budget (tokens)
+    LOCAL_MAX_TOOL_ITERATIONS: int = 20            # infinite-loop guard
+
+    # === ArgoHarness — Model Tiers ===
+    # Tier 0: ultra-fast scorer / judge (never used for coding)
+    OLLAMA_TIER0_MODEL: str = "qwen2.5:0.5b"
+    # Tier 1: fast local model for Q&A, read-only, simple tasks
+    OLLAMA_TIER1_MODEL: str = "qwen2.5-coder:3b"
+    # Tier 2: primary coder — 262K context, native tools, thinking mode
+    OLLAMA_TIER2_MODEL: str = "gemma4:31b-cloud"
+
+    # === ArgoHarness — Skill Injection ===
+    ARGOHARNESS_SKILLS_DIR: str = ""  # auto-resolved at startup
+
+    # === ArgoHarness — Verification Gate ===
+    HARNESS_JUDGE_MODEL: str = "qwen2.5:0.5b"       # model used to score outputs
+    HARNESS_VERIFICATION_THRESHOLD: int = 7          # min score (0-10) to accept output
+    HARNESS_MAX_RETRIES: int = 2                     # max retry attempts before accepting
+
+    # === ArgoHarness — Master Toggles ===
+    HARNESS_SKILL_INJECTION_ENABLED: bool = True     # inject methodology skills
+    HARNESS_VERIFICATION_ENABLED: bool = True        # score + retry outputs
+    HARNESS_GEMMA4_THINKING_ENABLED: bool = True     # enable gemma4 thinking mode
+
+    @field_validator("ARGOHARNESS_SKILLS_DIR", mode="after")
+    @classmethod
+    def resolve_argoharness_skills_dir(cls, v: str) -> str:
+        """Auto-resolve to repo_root/.claude/skills/argoharness/ if not set."""
+        if v:
+            return v
+        from pathlib import Path
+        # Walk up from this config file to find the repo root containing .claude/
+        current = Path(__file__).resolve()
+        for parent in [current, *current.parents]:
+            candidate = parent / ".claude" / "skills" / "argoharness"
+            if candidate.exists():
+                return str(candidate)
+        return ""  # not found — skill injection will be a no-op
+
     # === Hybrid Router (Argo) ===
     ROUTING_MODE: Literal["auto", "prefer_local", "prefer_cloud", "force_local", "force_cloud"] = (
         "auto"

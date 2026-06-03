@@ -59,7 +59,8 @@ export default function UsageStats() {
   const [usage, setUsage] = useState(null)
 
   useEffect(() => {
-    fetch(`${API}/usage`)
+    const token = localStorage.getItem('token')
+    fetch(`${API}/usage`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => setUsage(data || MOCK_USAGE))
       .catch(() => setUsage(MOCK_USAGE))

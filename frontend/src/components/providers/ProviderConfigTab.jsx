@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Check, X } from 'lucide-react'
 import ModelSelector from './ModelSelector'
+import { apiFetch } from '../../lib/api'
 
 const PROVIDER_TYPES = [
   { value: 'ollama', label: 'Ollama', needsUrl: true, needsKey: false, placeholder: 'http://localhost:11434', hint: 'Local Ollama server running on your machine' },
@@ -10,10 +12,6 @@ const PROVIDER_TYPES = [
 
 const EMPTY_FORM = { name: '', provider_type: 'ollama', host_url: '', api_key: '', model_name: '', is_enabled: true, is_default: false }
 
-function authHeader() {
-  const token = localStorage.getItem('token') || ''
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function ProviderConfigTab() {
   const [configs, setConfigs] = useState([])
@@ -29,7 +27,7 @@ export default function ProviderConfigTab() {
   const loadConfigs = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/providers/configs', { headers: authHeader() })
+      const res = await apiFetch('/api/v1/providers/configs')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setConfigs(data.items || [])
@@ -79,9 +77,9 @@ export default function ProviderConfigTab() {
       }
       const url = editId ? `/api/v1/providers/configs/${editId}` : '/api/v1/providers/configs'
       const method = editId ? 'PATCH' : 'POST'
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -97,7 +95,7 @@ export default function ProviderConfigTab() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this provider?')) return
     try {
-      await fetch(`/api/v1/providers/configs/${id}`, { method: 'DELETE', headers: authHeader() })
+      await apiFetch(`/api/v1/providers/configs/${id}`, { method: 'DELETE' })
       await loadConfigs()
     } catch (e) {
       setError(e.message)
@@ -107,7 +105,7 @@ export default function ProviderConfigTab() {
   const handleTest = async (id) => {
     setTesting(id)
     try {
-      const res = await fetch(`/api/v1/providers/configs/${id}/test`, { method: 'POST', headers: authHeader() })
+      const res = await apiFetch(`/api/v1/providers/configs/${id}/test`, { method: 'POST' })
       const data = await res.json()
       setTestResults((prev) => ({ ...prev, [id]: data }))
     } catch {
@@ -265,11 +263,12 @@ export default function ProviderConfigTab() {
                         marginTop: 6,
                         fontSize: 11,
                         color: result.ok ? 'var(--status-success)' : 'var(--status-error)',
+                        display: 'flex', alignItems: 'center', gap: 4,
                       }}
                     >
                       {result.ok
-                        ? `✓ Reachable${result.latency_ms != null ? ` (${result.latency_ms}ms)` : ''}`
-                        : `✗ ${result.error}`}
+                        ? <><Check size={11} strokeWidth={2.5} />Reachable{result.latency_ms != null ? ` (${result.latency_ms}ms)` : ''}</>
+                        : <><X size={11} strokeWidth={2.5} />{result.error}</>}
                     </div>
                   )}
                 </div>
@@ -468,5 +467,4 @@ const inputStyle = {
   fontSize: 12,
   fontFamily: 'var(--f-mono)',
   boxSizing: 'border-box',
-  outline: 'none',
 }

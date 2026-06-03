@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, ArrowRight } from 'lucide-react'
 
 const API = '/api/v1/github'
 
@@ -67,7 +67,7 @@ function PRList({ prs }) {
             <span style={{ fontSize: '11px', color: pr.state === 'open' ? 'var(--success)' : 'var(--text-dim)', fontWeight: 700 }}>{pr.state}</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>
-            {pr.head?.ref} → {pr.base?.ref} · by {pr.user?.login}
+            {pr.head?.ref} <ArrowRight size={10} style={{ verticalAlign: 'middle', opacity: 0.6 }} /> {pr.base?.ref} · by {pr.user?.login}
           </div>
         </div>
       ))}
@@ -221,7 +221,6 @@ export function GitHubPanel() {
               padding: '9px 12px',
               fontSize: '13px',
               color: 'var(--text-primary)',
-              outline: 'none',
               fontFamily: 'monospace',
             }}
           />
@@ -248,7 +247,7 @@ export function GitHubPanel() {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', animation: 'scale-in 180ms var(--ease-out) both' }}>
       {/* Left: user + repos */}
       <div style={{ width: '300px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* User card */}

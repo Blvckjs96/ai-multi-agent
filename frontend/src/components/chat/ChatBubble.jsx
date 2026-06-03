@@ -9,10 +9,10 @@ const styles = {
   }),
   bubble: (role) => ({
     maxWidth: '72%',
-    padding: role === 'user' ? '9px 14px' : '10px 0',
-    borderRadius: role === 'user' ? '16px 16px 4px 16px' : '0',
-    background: role === 'user' ? 'var(--bg-elevated)' : 'transparent',
-    border: role === 'user' ? '1px solid var(--border-active)' : 'none',
+    padding: '9px 14px',
+    borderRadius: role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+    background: role === 'user' ? 'var(--bg-elevated)' : 'rgba(255,255,255,0.04)',
+    border: role === 'user' ? '1px solid var(--border-active)' : '1px solid rgba(255,255,255,0.06)',
     color: 'var(--text-primary)',
     fontSize: '13px',
     lineHeight: 1.6,
@@ -116,14 +116,38 @@ function PhaseSeparator({ text }) {
 }
 
 export function ChatBubble({ message }) {
-  const { role, type, text, tool, input, content } = message
+  const { role, type, subtype, text, tool, input, content } = message
 
   if (type === 'phase_separator') return <PhaseSeparator text={text} />
   if (type === 'tool_use') return <ToolUseBubble tool={tool} input={input} />
   if (type === 'tool_result') return <ToolResultBubble content={content} />
 
+  // Thinking bubbles — model reasoning, visually distinct
+  if (role === 'assistant' && subtype === 'thinking') {
+    return (
+      <div style={{ ...styles.row('assistant'), marginBottom: 2 }}>
+        <div style={{
+          maxWidth: '72%',
+          padding: '8px 14px',
+          borderRadius: '12px 12px 12px 4px',
+          background: 'rgba(167,139,250,0.06)',
+          border: '1px solid rgba(167,139,250,0.2)',
+          borderLeft: '2px solid var(--accent-purple)',
+          opacity: 0.75,
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accent-purple)', marginBottom: 4 }}>
+            thinking
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.55 }}>
+            {text || ''}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div style={styles.row(role)}>
+    <div style={{ ...styles.row(role), animation: 'bubble-in 160ms var(--ease-out) both' }}>
       <div style={styles.bubble(role)}>
         {role === 'assistant' ? (
           <ReactMarkdown>{text || ''}</ReactMarkdown>

@@ -43,7 +43,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€
 
   const sendBtnStyle = { width: 38, height: 38, borderRadius: '50%', border: 'none', background: disabled ? 'var(--border)' : 'linear-gradient(135deg, #00d4ff, #00ff9d)', color: '#0a0a0a', cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'opacity 150ms', opacity: disabled ? 0.5 : 1 }
 
-  const textareaStyle = { flex: 1, resize: 'none', background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: '12px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5, outline: 'none', overflowY: 'hidden', transition: 'border-color 150ms', fontFamily: 'inherit' }
+  const textareaStyle = { flex: 1, resize: 'none', background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: '12px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5, overflowY: 'hidden', transition: 'border-color 150ms', fontFamily: 'inherit' }
 
   const containerStyle = { display: 'flex', alignItems: 'flex-end', gap: '10px', padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'rgba(13,13,13,0.8)', backdropFilter: 'blur(12px)' }
 
@@ -75,7 +75,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Ask Argo anythingâ€
         placeholder={placeholder}
         disabled={disabled}
         style={textareaStyle}
-        onFocus={(e) => (e.target.style.borderColor = '#00d4ff55')}
+        onFocus={(e) => (e.target.style.borderColor = 'var(--border-accent)')}
         onBlur={(e) => (e.target.style.borderColor = 'var(--border-strong)')}
       />
       <button onClick={submit} disabled={disabled} aria-label="Send" style={sendBtnStyle}>

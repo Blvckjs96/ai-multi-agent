@@ -31,13 +31,18 @@ const s = {
   },
 }
 
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 export default function IndexStatus({ workspaceId, repoPath, onStatusChange }) {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const refresh = useCallback(() => {
     if (!workspaceId) return
-    fetch(`${API}/${workspaceId}/status`)
+    fetch(`${API}/${workspaceId}/status`, { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         setStatus(data)
@@ -52,7 +57,7 @@ export default function IndexStatus({ workspaceId, repoPath, onStatusChange }) {
     if (!repoPath) return
     setLoading(true)
     try {
-      const r = await fetch(`${API}/${workspaceId}/start?repo_path=${encodeURIComponent(repoPath)}`, { method: 'POST' })
+      const r = await fetch(`${API}/${workspaceId}/start?repo_path=${encodeURIComponent(repoPath)}`, { method: 'POST', headers: authHeaders() })
       if (r.ok) { await new Promise((res) => setTimeout(res, 800)); refresh() }
     } finally {
       setLoading(false)
@@ -62,7 +67,7 @@ export default function IndexStatus({ workspaceId, repoPath, onStatusChange }) {
   const handleStop = async () => {
     setLoading(true)
     try {
-      await fetch(`${API}/${workspaceId}/stop`, { method: 'POST' })
+      await fetch(`${API}/${workspaceId}/stop`, { method: 'POST', headers: authHeaders() })
       refresh()
     } finally {
       setLoading(false)

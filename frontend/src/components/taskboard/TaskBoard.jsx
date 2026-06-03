@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 
 const API = '/api/v1/tasks'
 
@@ -109,7 +110,7 @@ function TaskCard({ task, onMove, onDelete }) {
                 fontFamily: 'inherit',
               }}
             >
-              → {c.label}
+              <ArrowRight size={11} style={{ verticalAlign: 'middle' }} /> {c.label}
             </button>
           ))}
           <button
@@ -192,7 +193,6 @@ function AddTaskInline({ columnId, workspaceId, onAdd }) {
           padding: '7px 10px',
           fontSize: 13,
           color: 'var(--text-primary)',
-          outline: 'none',
           width: '100%',
           fontFamily: 'inherit',
         }}

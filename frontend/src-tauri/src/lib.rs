@@ -47,6 +47,7 @@ async fn pty_spawn(
     cmd: String,
     args: Vec<String>,
     env: HashMap<String, String>,
+    cwd: Option<String>,
     cols: u16,
     rows: u16,
     state: State<'_, PtyState>,
@@ -64,6 +65,9 @@ async fn pty_spawn(
     builder.args(&args);
     for (k, v) in &env {
         builder.env(k, v);
+    }
+    if let Some(ref dir) = cwd {
+        builder.cwd(dir);
     }
 
     let child = ChildHandle(slave.spawn_command(builder).map_err(|e| e.to_string())?);
@@ -127,6 +131,16 @@ fn pty_resize(id: String, cols: u16, rows: u16, state: State<'_, PtyState>) -> R
 fn pty_kill(id: String, state: State<'_, PtyState>) -> Result<(), String> {
     state.sessions.lock().unwrap().remove(&id);
     Ok(())
+}
+
+/// Open a native folder-picker dialog and return the selected path, or null.
+#[tauri::command]
+async fn choose_folder() -> Option<String> {
+    rfd::AsyncFileDialog::new()
+        .set_title("Select repository folder")
+        .pick_folder()
+        .await
+        .map(|h| h.path().to_string_lossy().to_string())
 }
 
 // ── Git worktree commands ─────────────────────────────────────────────────────
@@ -296,6 +310,7 @@ pub fn run() {
             pty_resize,
             pty_kill,
             find_claude_path,
+            choose_folder,
             git_worktree_create,
             git_worktree_list,
             git_worktree_remove,

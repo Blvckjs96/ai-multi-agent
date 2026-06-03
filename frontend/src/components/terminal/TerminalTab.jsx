@@ -40,7 +40,7 @@ const XTERM_THEME = {
 }
 
 // Claude CLI flags — autonomous agent mode
-const CLAUDE_ARGS = ['--enable-auto-mode', '--model', 'claude-opus-4-7']
+const CLAUDE_ARGS = ['--dangerously-skip-permissions', '--model', 'claude-opus-4-7']
 const CLAUDE_ENV  = {
   // Proper terminal capabilities so Claude renders colours / styling correctly
   TERM:                          'xterm-256color',
@@ -81,18 +81,23 @@ function StatusDot({ status }) {
 
 // ── TerminalTab ───────────────────────────────────────────────────────────────
 
-export function TerminalTab() {
-  const containerRef  = useRef(null)
-  const termRef       = useRef(null)   // xterm Terminal instance
-  const fitRef        = useRef(null)   // FitAddon instance
-  const sessionIdRef  = useRef(null)
-  const unlistenRef   = useRef(null)   // cleanup for pty-output listener
-  const unlistenExRef = useRef(null)   // cleanup for pty-exit listener
+export function TerminalTab({ taskId, task, cwd: cwdProp, worktreePath, workspacePath, onStatusChange }) {
+  const containerRef         = useRef(null)
+  const termRef              = useRef(null)   // xterm Terminal instance
+  const fitRef               = useRef(null)   // FitAddon instance
+  const sessionIdRef         = useRef(null)
+  const unlistenRef          = useRef(null)   // cleanup for pty-output listener
+  const unlistenExRef        = useRef(null)   // cleanup for pty-exit listener
+  const initialPromptSentRef = useRef(false)  // guard: only inject task prompt once per tab
 
   const [status, setStatus]   = useState('idle')   // idle | spawning | running | awaiting | busy | exited | error
   const [errMsg, setErrMsg]   = useState('')
   const [claudePath, setClaudePath] = useState(null)
-  const [cwd, setCwd]         = useState(null)
+  const [cwd, setCwd]         = useState(cwdProp ?? null)
+
+  useEffect(() => {
+    onStatusChange?.(status)
+  }, [status, onStatusChange])
 
   // ── Terminal lifecycle ────────────────────────────────────────────────────
 
@@ -162,7 +167,7 @@ export function TerminalTab() {
 
     setStatus('spawning')
     setErrMsg('')
-    setCwd(null)
+    setCwd(cwdProp ?? null)
 
     // Listen for PTY output events
     unlistenRef.current = await listen('pty-output', (event) => {
@@ -171,11 +176,14 @@ export function TerminalTab() {
       }
     })
 
-    // Listen for PTY exit
+    // Listen for PTY exit — cleanup worktree if one was created
     unlistenExRef.current = await listen('pty-exit', (event) => {
-      if (event.payload.id === id) {
-        setStatus('exited')
-        term.writeln('\r\n\x1b[2m[session ended]\x1b[0m')
+      if (event.payload.id !== id) return
+      setStatus('exited')
+      term.writeln('\r\n\x1b[2m[session ended]\x1b[0m')
+      if (worktreePath && workspacePath) {
+        invoke('git_worktree_remove', { cwd: workspacePath, path: worktreePath, force: false })
+          .catch(() => {}) // non-fatal: may already be removed
       }
     })
 
@@ -187,17 +195,29 @@ export function TerminalTab() {
         cmd: path,
         args: CLAUDE_ARGS,
         env: CLAUDE_ENV,
+        ...(cwdProp ? { cwd: cwdProp } : {}),
         cols: Math.max(cols, 20),
         rows: Math.max(rows, 5),
       })
       setStatus('running')
       term.focus()
+
+      // Auto-inject task description on first spawn only (not on "New session")
+      if (task?.title && !initialPromptSentRef.current) {
+        initialPromptSentRef.current = true
+        const prompt = [task.title, task.description].filter(Boolean).join('\n\n')
+        setTimeout(() => {
+          if (sessionIdRef.current === id) {
+            invoke('pty_write', { id, data: prompt + '\n' }).catch(() => {})
+          }
+        }, 1200)
+      }
     } catch (err) {
       setStatus('error')
       setErrMsg(String(err))
       term.writeln(`\r\n\x1b[31mFailed to start Claude CLI:\x1b[0m ${err}`)
     }
-  }, [])
+  }, [cwdProp, task])
 
   // ── Mount: find claude binary, spawn first session ────────────────────────
 

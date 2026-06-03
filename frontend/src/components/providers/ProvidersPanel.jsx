@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { apiFetch } from '../../lib/api'
 import ProviderCard from './ProviderCard'
 import FallbackChainEditor from './FallbackChainEditor'
 import ProviderConfigTab from './ProviderConfigTab'
@@ -15,7 +16,7 @@ export default function ProvidersPanel() {
 
   const fetchHealth = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/providers/health')
+      const res = await apiFetch('/api/v1/providers/health')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setHealth(data)
@@ -36,7 +37,7 @@ export default function ProvidersPanel() {
   const handleReset = async () => {
     setResetting(true)
     try {
-      await fetch('/api/v1/providers/health/reset', { method: 'POST' })
+      await apiFetch('/api/v1/providers/health/reset', { method: 'POST' })
       await fetchHealth()
     } finally {
       setResetting(false)
@@ -56,6 +57,7 @@ export default function ProvidersPanel() {
         flexDirection: 'column',
         background: 'var(--bg-base)',
         overflow: 'hidden',
+        animation: 'scale-in 180ms var(--ease-out) both',
       }}
     >
       <div

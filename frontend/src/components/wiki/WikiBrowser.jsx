@@ -117,10 +117,9 @@ export default function WikiBrowser({ workspaceId }) {
           <RefreshCw size={13} />
         </button>
         <button
-          style={{ ...s.iconBtn, color: 'var(--accent)', borderColor: 'var(--border-accent)' }}
-          title="New page"
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-soft)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+          disabled
+          style={{ ...s.iconBtn, color: 'var(--text-muted)', borderColor: 'var(--border)', opacity: 0.45, cursor: 'not-allowed' }}
+          title="Pages are auto-created by Chiron AI. Use the Ingest tab to add sources."
         >
           <FilePlus2 size={13} />
         </button>
@@ -140,29 +139,34 @@ export default function WikiBrowser({ workspaceId }) {
             return (
               <div key={prefix}>
                 {!isRoot && (
-                  <div
-                    style={s.groupHeader}
+                  <button
+                    type="button"
+                    style={{ ...s.groupHeader, background: 'none', border: 'none', width: '100%', fontFamily: 'inherit', outline: 'none' }}
                     onClick={() => toggleGroup(prefix)}
-                    role="button"
                     aria-expanded={!isCollapsed}
                   >
                     {isCollapsed ? <ChevronRight size={10} style={{ opacity: 0.6, flexShrink: 0 }} /> : <ChevronDown size={10} style={{ opacity: 0.6, flexShrink: 0 }} />}
                     {isCollapsed ? <Folder size={12} style={{ flexShrink: 0 }} /> : <FolderOpen size={12} style={{ flexShrink: 0 }} />}
                     <span>{prefix}</span>
-                  </div>
+                  </button>
                 )}
                 {!isCollapsed && groupPages.map((page) => {
                   const label = isRoot ? page.title : page.title
                   const isActive = page.slug === selectedSlug
                   return (
-                    <div
+                    <button
                       key={page.slug}
+                      type="button"
                       style={{
                         ...s.treeItem,
                         paddingLeft: isRoot ? '14px' : '28px',
                         background: isActive ? 'var(--bg-active)' : 'transparent',
                         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                         borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                        border: 'none',
+                        outline: 'none',
+                        width: '100%',
+                        fontFamily: 'inherit',
                       }}
                       onClick={() => setSelectedSlug(page.slug)}
                       onMouseEnter={(e) => {
@@ -176,7 +180,7 @@ export default function WikiBrowser({ workspaceId }) {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {label}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>

@@ -26,10 +26,6 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
 
 from app.api.deps import DBSession, OptionalCurrentUser, ValidAPIKey
 from app.services.change_log_svc import ChangeLogService
@@ -37,8 +33,11 @@ from app.services.chat_session import (
     active_session_ids,
     cancel_session,
     get_session_workspace,
+    route_session,
     run_session,
 )
+from app.services.connectivity import routing_decision
+from app.services.context_builder import build_context
 from app.services.memory_svc import memory_svc, project_name_from_path
 from app.services.triage import TaskTriageService, build_context_injection
 from app.services.workspace import WorkspaceService
@@ -47,6 +46,17 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 
 _triage = TaskTriageService()
+
+# Tools that actually modify files — only these warrant plan-mode confirmation.
+_WRITE_TOOLS: frozenset[str] = frozenset({"Write", "Edit", "MultiEdit", "Bash", "NotebookEdit"})
+
+# Base persona injected into every session so Claude identifies as Argo.
+_ARGO_PERSONA = (
+    "You are Argo, an AI workspace assistant built on Claude Code (claude-sonnet-4-6) by Anthropic. "
+    "Argo is a developer-focused IDE that helps engineers with coding, architecture, debugging, "
+    "AI pipeline management, and knowledge capture. "
+    "When asked who you are, introduce yourself as Argo — not as Claude or Claude Code."
+)
 
 _SSE_HEADERS = {
     "Cache-Control": "no-cache",
@@ -72,6 +82,8 @@ class ChatStreamRequest(BaseModel):
     session_id: str | None = None
     workspace_id: UUID | None = None
     permission_mode: Literal["plan", "auto"] = "plan"
+    coworker_id: UUID | None = None
+    user_model: str | None = None   # ArgoHarness: user-selected local model override
 
 
 class ChatConfirmRequest(BaseModel):
@@ -98,17 +110,18 @@ def _normalize_event(event: Any, session_id: str | None) -> dict[str, Any] | Non
         if not event.text:
             return None  # partial with no text yet
         base["text"] = event.text
-        if event.subtype:
-            base["subtype"] = event.subtype
+        base["subtype"] = event.subtype or "text"  # "text" | "thinking"
 
     elif event.type == "tool_use":
         tool_use = event.data.get("tool_use") or {}
         base["tool"] = tool_use.get("name", "")
         base["input"] = tool_use.get("input", {})
+        base["tool_index"] = event.data.get("index", 0)
 
     elif event.type == "tool_result":
         content = event.data.get("tool_result") or {}
         base["content"] = content.get("content", "")
+        base["tool_index"] = event.data.get("index", 0)
 
     elif event.type == "result":
         usage = event.data.get("usage") or {}
@@ -144,6 +157,7 @@ async def _stream_response(
     chiron_workspace_id: str | None = None,
     tier0_context: str | None = None,
     tier1_context: str | None = None,
+    db: Any = None,
 ) -> AsyncGenerator[str, None]:
     """Generate SSE events for a chat session.
 
@@ -174,6 +188,13 @@ async def _stream_response(
     got_result = False
     try:
         triage = await _triage.analyze(body.message)
+
+        # Auto-downgrade to permission_mode=auto for read-only triage results.
+        # Queries like "who are you?" or "explain X" never write files, so the
+        # plan-gate confirmation step is unnecessary and confusing for the user.
+        effective_permission_mode = body.permission_mode
+        if effective_permission_mode == "plan" and not _WRITE_TOOLS.intersection(triage.allowed_tools):
+            effective_permission_mode = "auto"
 
         # Inject Chiron MCP when user is authenticated and workspace is set.
         if chiron_token and chiron_workspace_id:
@@ -211,9 +232,10 @@ async def _stream_response(
             triage = dc_replace(triage, mcp_servers=merged_servers, allowed_tools=merged_tools)
 
         logger.info(
-            "Chat stream session=%s mode=%s skills=%s tools=%d workspace=%s chiron=%s",
+            "Chat stream session=%s mode=%s→%s skills=%s tools=%d workspace=%s chiron=%s",
             current_session_id or "new",
             body.permission_mode,
+            effective_permission_mode,
             triage.skills,
             len(triage.allowed_tools),
             workspace_path or "(none)",
@@ -221,9 +243,10 @@ async def _stream_response(
         )
 
         # Pre-session context injection — strategy differs for new vs resumed sessions.
+        # Always prepend the Argo persona so Claude identifies itself correctly.
         system_prompt: str | None = None
         if body.message:
-            parts: list[str] = []
+            parts: list[str] = [_ARGO_PERSONA]
 
             if not body.session_id:
                 # ── New session ──────────────────────────────────────────────
@@ -264,17 +287,32 @@ async def _stream_response(
                     bool(stm_ctx),
                 )
 
-            if parts:
-                system_prompt = "\n\n".join(parts)
-                logger.debug("Injecting %d chars system context", len(system_prompt))
+            system_prompt = "\n\n".join(parts)
+            logger.debug("Injecting %d chars system context", len(system_prompt))
 
-        async for event in run_session(
+        # For local (Ollama) routing: inject RAG + codegraph context into system_prompt.
+        # Claude path already has tier0/tier1 from above; local path needs extra grounding.
+        local_decision = await routing_decision(triage)
+        if local_decision == "ollama" and body.message:
+            local_ctx = await build_context(
+                body.message,
+                workspace_id=body.workspace_id,
+                workspace_path=workspace_path,
+                session_id=body.session_id,
+                db=db,
+            )
+            if local_ctx:
+                system_prompt = (system_prompt + "\n\n" + local_ctx) if system_prompt else local_ctx
+                logger.debug("Injected %d chars local context for Ollama session", len(local_ctx))
+
+        async for event in route_session(
             body.message,
             triage,
             session_id=body.session_id,
-            permission_mode=body.permission_mode,
+            permission_mode=effective_permission_mode,
             system_prompt=system_prompt,
             workspace_path=workspace_path,
+            user_model=body.user_model,
         ):
             if event.session_id:
                 current_session_id = event.session_id
@@ -342,6 +380,21 @@ async def _stream_response(
                     )
                     _bg_tasks.add(task)
                     task.add_done_callback(_bg_tasks.discard)
+
+                    # Chiron wiki auto-draft — only when authenticated + response is substantial
+                    if chiron_token and chiron_workspace_id:
+                        full_response = " ".join(session_assistant_text)
+                        if len(full_response) > 200:
+                            wiki_task = asyncio.create_task(
+                                _maybe_draft_wiki(
+                                    chiron_token=chiron_token,
+                                    chiron_workspace_id=chiron_workspace_id,
+                                    conversation_summary=full_response[:2000],
+                                    original_message=body.message or "",
+                                )
+                            )
+                            _bg_tasks.add(wiki_task)
+                            wiki_task.add_done_callback(_bg_tasks.discard)
                 break
 
             if request is not None and await request.is_disconnected():
@@ -462,6 +515,53 @@ async def _save_session_memory(
     await memory_svc.reflect(summary)
 
 
+async def _maybe_draft_wiki(
+    chiron_token: str,
+    chiron_workspace_id: str,
+    conversation_summary: str,
+    original_message: str,
+) -> None:
+    """Background Haiku task: propose a Chiron wiki draft if content is worth recording.
+
+    Runs entirely in the background after the SSE stream ends — never blocks UX.
+    Uses the cheapest model (haiku) to keep costs low.
+    """
+    from dataclasses import replace as dc_replace
+
+    from app.core.config import settings as _settings
+    from app.services.chat_session import run_session
+    from app.services.claude_cli import TriageResult
+
+    prompt = (
+        f"User asked: {original_message[:300]}\n\n"
+        f"You responded with:\n{conversation_summary[:1500]}\n\n"
+        "If this conversation contains a reusable pattern, architecture decision, "
+        "debugging insight, or process that would help future sessions — "
+        "call mcp__chiron__propose_wiki_edit to draft a wiki page. "
+        "If there is nothing worth recording, respond with just: SKIP"
+    )
+    chiron_mcp = {
+        "chiron": {
+            "url": f"{_settings.CHIRON_MCP_BASE_URL}/chiron/mcp",
+            "headers": {"x-mcp-token": chiron_token},
+        }
+    }
+    triage = TriageResult(
+        allowed_tools=["mcp__chiron__propose_wiki_edit"],
+        model="haiku",
+    )
+    triage = dc_replace(triage, mcp_servers=chiron_mcp)
+
+    try:
+        async for event in run_session(
+            prompt, triage, permission_mode="auto", workspace_path=None
+        ):
+            if event.type == "result":
+                break
+    except Exception as exc:
+        logger.debug("Wiki auto-draft background task failed (non-fatal): %s", exc)
+
+
 def _extract_concepts(text: str) -> list[str]:
     """Quick keyword extraction — no ML, just tokenise and deduplicate."""
     stop = {"the", "a", "an", "is", "in", "to", "of", "and", "or", "it", "for", "with", "how"}
@@ -483,7 +583,6 @@ def _extract_concepts(text: str) -> list[str]:
 
 
 @router.post("/stream")
-@limiter.limit("20/minute")
 async def chat_stream(
     body: ChatStreamRequest,
     request: Request,
@@ -517,6 +616,17 @@ async def chat_stream(
         except Exception as exc:
             logger.warning("workspace lookup failed for %s: %s", body.workspace_id, exc)
 
+    # Coworker persona — prepend system prompt as an extra context tier
+    if body.coworker_id and current_user:
+        try:
+            from app.services.coworker import CoworkerService
+            cw = await CoworkerService(db).get(body.coworker_id, current_user.id)
+            if cw.system_prompt:
+                coworker_prefix = f"[Persona: {cw.name} — {cw.role}]\n{cw.system_prompt}"
+                tier0_context = (coworker_prefix + "\n\n" + tier0_context) if tier0_context else coworker_prefix
+        except Exception as exc:
+            logger.debug("coworker lookup failed (non-fatal): %s", exc)
+
     return StreamingResponse(
         _stream_response(
             body,
@@ -527,6 +637,7 @@ async def chat_stream(
             chiron_workspace_id=chiron_workspace_id,
             tier0_context=tier0_context,
             tier1_context=tier1_context,
+            db=db,
         ),
         media_type="text/event-stream",
         headers=_SSE_HEADERS,
@@ -534,14 +645,15 @@ async def chat_stream(
 
 
 @router.post("/confirm")
-@limiter.limit("20/minute")
 async def chat_confirm(request: Request, body: ChatConfirmRequest) -> StreamingResponse:
     """Resume a plan-mode session in auto mode (user confirmed the plan)."""
     # Re-use the workspace path stored when the session was originally started.
     workspace_path = get_session_workspace(body.session_id)
 
+    # Claude CLI ≥2.1.x (--print mode) requires a non-empty message even on
+    # session resume — an empty stdin causes the CLI to exit without a result.
     stream_body = ChatStreamRequest(
-        message="",
+        message="yes, proceed with the plan",
         session_id=body.session_id,
         workspace_id=body.workspace_id,
         permission_mode="auto",

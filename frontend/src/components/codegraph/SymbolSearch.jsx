@@ -18,7 +18,7 @@ const s = {
     background: 'var(--bg-surface)', flexShrink: 0,
   },
   input: {
-    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+    flex: 1, background: 'transparent', border: 'none', 
     color: 'var(--text-primary)', fontSize: '13px',
     fontFamily: 'var(--f-mono)',
   },

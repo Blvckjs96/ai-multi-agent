@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react'
+
 // All NIM models are confirmed free-endpoint (nim_type_preview) at build.nvidia.com
 const ROLE_CHAINS = {
   planner: [
@@ -27,10 +29,10 @@ const ROLE_CHAINS = {
 }
 
 const PROVIDER_COLORS = {
-  nim: '#76b900',
-  ollama: '#6366f1',
-  anthropic: '#cc785c',
-  claude_cli: '#cc785c',
+  nim:       'var(--provider-nim)',
+  ollama:    'var(--provider-ollama)',
+  anthropic: 'var(--provider-anthropic)',
+  claude_cli:'var(--provider-claude)',
 }
 
 function ChainStep({ step, index, total }) {
@@ -87,7 +89,7 @@ function ChainStep({ step, index, total }) {
         {step.note}
       </span>
 
-      {index < total - 1 && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>→</span>}
+      {index < total - 1 && <ArrowRight size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
     </div>
   )
 }

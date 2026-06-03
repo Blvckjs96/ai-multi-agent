@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 
 const PRIORITY_DOT = {
   high:   '#ff4d6a',
@@ -22,11 +23,9 @@ export function IssueRow({ task, isSelected, onClick, onDelete }) {
   const hasSession = task.runtime_status && task.runtime_status !== 'none'
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -42,9 +41,14 @@ export function IssueRow({ task, isSelected, onClick, onDelete }) {
           ? 'rgba(255,255,255,0.03)'
           : 'transparent',
         borderLeft: isSelected ? '2px solid var(--accent-cyan)' : '2px solid transparent',
+        border: 'none',
+        outline: 'none',
         transition: 'background 100ms',
         userSelect: 'none',
         position: 'relative',
+        width: '100%',
+        textAlign: 'left',
+        fontFamily: 'inherit',
       }}
     >
       {/* Priority dot */}
@@ -107,9 +111,9 @@ export function IssueRow({ task, isSelected, onClick, onDelete }) {
             flexShrink: 0,
           }}
         >
-          ×
+          <X size={11} strokeWidth={2} />
         </button>
       )}
-    </div>
+    </button>
   )
 }

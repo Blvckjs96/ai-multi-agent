@@ -50,9 +50,13 @@ export function usePipeline() {
       abortRef.current = controller
 
       try {
-        const response = await fetch('/api/v1/pipeline/run', {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${import.meta.env.VITE_API_ORIGIN ?? ''}/api/v1/pipeline/run`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ description }),
           signal: controller.signal,
         })

@@ -2,53 +2,66 @@
  * useChat — manages Claude CLI chat sessions via SSE.
  *
  * Status lifecycle:
- *   idle
- *     → planning      (permission_mode=plan, Claude writes its plan)
- *     → awaiting_confirm  (plan result event received, waiting for user)
- *     → executing     (permission_mode=auto, Claude executes the plan)
- *     → done
- *     → error
- *
- * Any state → idle  (via reset)
- * Any state → idle  (via cancel)
+ *   idle → planning → awaiting_confirm → executing → done | error
+ *   Any state → idle (via reset or cancel)
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { API_ORIGIN } from '../lib/api'
+import { checkPromptInjection } from '../lib/promptInjectionGuard'
 
-const API_BASE = '/api/v1/chat'
+const API_BASE = `${API_ORIGIN}/api/v1/chat`
+const CONV_API  = `${API_ORIGIN}/api/v1/conversations`
 
 export const STATUS = {
-  IDLE: 'idle',
-  PLANNING: 'planning',
+  IDLE:             'idle',
+  PLANNING:         'planning',
   AWAITING_CONFIRM: 'awaiting_confirm',
-  EXECUTING: 'executing',
-  DONE: 'done',
-  ERROR: 'error',
+  EXECUTING:        'executing',
+  DONE:             'done',
+  ERROR:            'error',
 }
 
 function parseSseLine(line) {
   if (!line.startsWith('data: ')) return null
-  try {
-    return JSON.parse(line.slice(6))
-  } catch {
-    return null
-  }
+  try { return JSON.parse(line.slice(6)) } catch { return null }
 }
 
-export function useChat() {
-  const [messages, setMessages] = useState([])   // { id, role, text, type, tool, input, content, phase? }
-  const [rawEvents, setRawEvents] = useState([]) // all CLIEvents for terminal view
-  const [sessionId, setSessionId] = useState(null)
-  const [status, setStatus] = useState(STATUS.IDLE)
-  const [error, setError] = useState(null)
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+// ── Main hook ─────────────────────────────────────────────────────────────────
+
+export function useChat(conversationId = null) {
+  const [messages,    setMessages]    = useState([])
+  const [rawEvents,   setRawEvents]   = useState([])
+  const [sessionId,   setSessionId]   = useState(null)
+  const [status,      setStatus]      = useState(STATUS.IDLE)
+  const [error,       setError]       = useState(null)
   const [activeTools, setActiveTools] = useState([])
-  const [stats, setStats] = useState(null)  // { inputTokens, outputTokens, costUsd } from result event
+  const [stats,       setStats]       = useState(null)
 
-  const abortRef = useRef(null)
-  const assistantBufRef = useRef('')   // accumulate streaming text chunks
-  const streamingMsgRef = useRef(null) // id of the currently-streaming assistant message
+  const abortRef         = useRef(null)
+  const assistantBufRef  = useRef('')
+  const streamingMsgRef  = useRef(null)
+  const toolCallMapRef   = useRef({})
 
-  // ── helpers ──────────────────────────────────────────────────────────────
+  // ── Session ID localStorage persist (Step 3) ─────────────────────────────
+
+  useEffect(() => {
+    if (!conversationId) return
+    const stored = localStorage.getItem(`session_${conversationId}`)
+    if (stored) setSessionId(stored)
+  }, [conversationId])
+
+  useEffect(() => {
+    if (!conversationId || !sessionId) return
+    localStorage.setItem(`session_${conversationId}`, sessionId)
+  }, [conversationId, sessionId])
+
+  // ── Message helpers ───────────────────────────────────────────────────────
 
   const appendMsg = useCallback((msg) => {
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), ...msg }])
@@ -66,7 +79,6 @@ export function useChat() {
   const flushBuffer = useCallback(() => {
     if (assistantBufRef.current) {
       if (streamingMsgRef.current === null) {
-        // Start new bubble
         appendMsg({ role: 'assistant', type: 'text', text: assistantBufRef.current })
         streamingMsgRef.current = 'active'
       } else {
@@ -77,10 +89,24 @@ export function useChat() {
     streamingMsgRef.current = null
   }, [appendMsg, patchLastAssistant])
 
+  // ── Persist a message to the backend (fire-and-forget) ───────────────────
+
+  const saveMessage = useCallback((role, content, type = 'text') => {
+    if (!conversationId) return
+    fetch(`${CONV_API}/${conversationId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ role, content, type }),
+    }).catch(() => {})
+  }, [conversationId])
+
+  // ── Load history from outside ─────────────────────────────────────────────
+
+  const loadHistory = useCallback((msgs) => {
+    setMessages(msgs)
+  }, [])
+
   // ── Core SSE consumer ─────────────────────────────────────────────────────
-  // phase: 'plan' | 'execute'
-  // On 'plan' phase: result → AWAITING_CONFIRM
-  // On 'execute' phase: result → DONE
 
   const consumeStream = useCallback(
     async (endpoint, body, phase = 'plan') => {
@@ -88,9 +114,9 @@ export function useChat() {
       const controller = new AbortController()
       abortRef.current = controller
 
-      // Reset per-stream state
       assistantBufRef.current = ''
       streamingMsgRef.current = null
+      toolCallMapRef.current  = {}
       setError(null)
       setActiveTools([])
       setStatus(phase === 'plan' ? STATUS.PLANNING : STATUS.EXECUTING)
@@ -98,14 +124,13 @@ export function useChat() {
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(body),
           signal: controller.signal,
         })
-
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`)
 
-        const reader = res.body.getReader()
+        const reader  = res.body.getReader()
         const decoder = new TextDecoder()
         let buf = ''
 
@@ -124,43 +149,60 @@ export function useChat() {
             setRawEvents((prev) => [...prev, evt])
             if (evt.session_id) setSessionId(evt.session_id)
 
-            // ── Text tokens ──
+            // ── Thinking block (Phase 2) ──
             if (evt.type === 'assistant' && evt.text) {
-              assistantBufRef.current += evt.text
-              if (streamingMsgRef.current === null) {
-                appendMsg({ role: 'assistant', type: 'text', text: assistantBufRef.current, phase })
-                streamingMsgRef.current = 'active'
+              if (evt.subtype === 'thinking') {
+                flushBuffer()
+                appendMsg({ role: 'assistant', type: 'thinking', text: evt.text, phase })
               } else {
-                patchLastAssistant(assistantBufRef.current)
+                assistantBufRef.current += evt.text
+                if (streamingMsgRef.current === null) {
+                  appendMsg({ role: 'assistant', type: 'text', text: assistantBufRef.current, phase })
+                  streamingMsgRef.current = 'active'
+                } else {
+                  patchLastAssistant(assistantBufRef.current)
+                }
               }
             }
 
-            // ── Tool use ──
+            // ── Tool use — linked timeline (Phase 2) ──
             if (evt.type === 'tool_use') {
               flushBuffer()
+              const toolIndex = evt.tool_index ?? Object.keys(toolCallMapRef.current).length
+              const id = crypto.randomUUID()
+              toolCallMapRef.current[toolIndex] = id
               setActiveTools((t) => [...new Set([...t, evt.tool])])
-              appendMsg({ role: 'tool', type: 'tool_use', tool: evt.tool, input: evt.input, phase })
+              appendMsg({ id, role: 'tool', type: 'tool_use', tool: evt.tool, input: evt.input, phase, status: 'running' })
             }
 
-            // ── Tool result ──
+            // ── Tool result — patch linked tool_use ──
             if (evt.type === 'tool_result') {
-              appendMsg({ role: 'tool', type: 'tool_result', content: evt.content, phase })
+              const toolIndex = evt.tool_index ?? (Object.keys(toolCallMapRef.current).length - 1)
+              const linkedId  = toolCallMapRef.current[toolIndex]
+              if (linkedId) {
+                setMessages((prev) =>
+                  prev.map((m) => m.id === linkedId ? { ...m, status: 'done', result: evt.content } : m)
+                )
+              } else {
+                appendMsg({ role: 'tool', type: 'tool_result', content: evt.content, phase })
+              }
               setActiveTools([])
             }
 
             // ── Session complete ──
             if (evt.type === 'result') {
               flushBuffer()
+              const finishedText = assistantBufRef.current
               setStats({
-                inputTokens: evt.input_tokens ?? 0,
+                inputTokens:  evt.input_tokens  ?? 0,
                 outputTokens: evt.output_tokens ?? 0,
-                costUsd: evt.cost_usd ?? 0,
+                costUsd:      evt.cost_usd      ?? 0,
               })
-              if (phase === 'plan') {
-                setStatus(STATUS.AWAITING_CONFIRM)
-              } else {
-                setStatus(STATUS.DONE)
-              }
+              // Persist assistant reply
+              if (finishedText) saveMessage('assistant', finishedText)
+
+              if (phase === 'plan') setStatus(STATUS.AWAITING_CONFIRM)
+              else                  setStatus(STATUS.DONE)
             }
 
             if (evt.type === 'error') {
@@ -168,9 +210,6 @@ export function useChat() {
               setStatus(STATUS.ERROR)
             }
 
-            // Server signals end-of-stream — flush any remaining buffer and
-            // unblock the UI if no terminal state was set (e.g. Claude CLI
-            // exited before sending a result event).
             if (evt.type === 'done') {
               flushBuffer()
               setStatus((prev) =>
@@ -186,47 +225,45 @@ export function useChat() {
         }
       }
     },
-    [appendMsg, flushBuffer, patchLastAssistant],
+    [appendMsg, flushBuffer, patchLastAssistant, saveMessage],
   )
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  /** Send a new user message (always starts in plan mode). */
   const send = useCallback(
-    async (message, workspaceId) => {
+    async (message, workspaceId, coworkerId = null, userModel = null) => {
+      if (checkPromptInjection(message)) {
+        setError('Message blocked: potential prompt injection detected.')
+        setStatus(STATUS.ERROR)
+        return
+      }
       appendMsg({ role: 'user', type: 'text', text: message })
+      saveMessage('user', message)
       const body = { message, session_id: sessionId, permission_mode: 'plan' }
       if (workspaceId) body.workspace_id = workspaceId
+      if (coworkerId)  body.coworker_id  = coworkerId
+      if (userModel)   body.user_model   = userModel   // ArgoHarness local model override
       await consumeStream(`${API_BASE}/stream`, body, 'plan')
     },
-    [appendMsg, consumeStream, sessionId],
+    [appendMsg, consumeStream, saveMessage, sessionId],
   )
 
-  /** Confirm the plan — resume the session in auto (execute) mode. */
   const confirm = useCallback(async () => {
     if (!sessionId) return
-    // Insert a visual phase separator into the message list
     appendMsg({ role: 'system', type: 'phase_separator', text: 'Executing…' })
-    await consumeStream(
-      `${API_BASE}/confirm`,
-      { session_id: sessionId },
-      'execute',
-    )
+    await consumeStream(`${API_BASE}/confirm`, { session_id: sessionId }, 'execute')
   }, [appendMsg, consumeStream, sessionId])
 
-  /** Cancel an in-flight stream and/or the remote session. */
   const cancel = useCallback(async () => {
     abortRef.current?.abort()
-    if (sessionId) {
-      fetch(`${API_BASE}/${sessionId}`, { method: 'DELETE' }).catch(() => {})
-    }
+    if (sessionId) fetch(`${API_BASE}/${sessionId}`, { method: 'DELETE' }).catch(() => {})
     setActiveTools([])
     setStatus(STATUS.IDLE)
   }, [sessionId])
 
-  /** Full conversation reset. */
   const reset = useCallback(() => {
     abortRef.current?.abort()
+    if (conversationId) localStorage.removeItem(`session_${conversationId}`)
     setMessages([])
     setRawEvents([])
     setSessionId(null)
@@ -236,7 +273,8 @@ export function useChat() {
     setStats(null)
     assistantBufRef.current = ''
     streamingMsgRef.current = null
-  }, [])
+    toolCallMapRef.current  = {}
+  }, [conversationId])
 
   return {
     messages,
@@ -250,5 +288,6 @@ export function useChat() {
     confirm,
     cancel,
     reset,
+    loadHistory,
   }
 }

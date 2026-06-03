@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 
 const API = '/api/v1/chiron'
 
@@ -56,7 +57,7 @@ function PageDetail({ page, workspaceId, onBack, onDelete }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '0 4px' }}>‹</button>
+        <button onClick={onBack} title="Back" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', borderRadius: 4 }}><ArrowLeft size={15} /></button>
         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{page.title}</span>
         <button
           onClick={() => onDelete(page.id)}
@@ -181,7 +182,7 @@ export function ChironPanel({ workspaceId }) {
   )
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'scale-in 180ms var(--ease-out) both' }}>
       {/* Sub-nav */}
       <div style={{ display: 'flex', gap: '4px', padding: '10px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <TabBtn id="pages" label={`Pages (${pages.length})`} />
@@ -213,7 +214,6 @@ export function ChironPanel({ workspaceId }) {
                   padding: '8px 12px',
                   fontSize: '13px',
                   color: 'var(--text-primary)',
-                  outline: 'none',
                 }}
               />
               <button
@@ -255,7 +255,6 @@ export function ChironPanel({ workspaceId }) {
                   padding: '8px 12px',
                   fontSize: '13px',
                   color: 'var(--text-primary)',
-                  outline: 'none',
                 }}
               />
             </div>
@@ -274,7 +273,6 @@ export function ChironPanel({ workspaceId }) {
                   padding: '8px 12px',
                   fontSize: '12px',
                   color: 'var(--text-primary)',
-                  outline: 'none',
                   fontFamily: 'monospace',
                   resize: 'vertical',
                 }}

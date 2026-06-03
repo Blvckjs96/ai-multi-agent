@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
 const API = '/api/v1/argon'
@@ -114,7 +115,7 @@ export default function WikiPage({ slug, scopeType, scopeId, onEdit, onBack }) {
               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
             >
-              ← Back
+              <ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Back
             </button>
           )}
           {onEdit && (

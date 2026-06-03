@@ -93,9 +93,9 @@ function PhaseIndicator({ status, activeTools, onAbort }) {
           onClick={onAbort}
           title="Stop execution"
           style={{
-            background: 'rgba(248,113,113,0.12)',
-            border: '1px solid rgba(248,113,113,0.3)',
-            color: '#f87171',
+            background: 'rgba(255,77,106,0.12)',
+            border: '1px solid rgba(255,77,106,0.3)',
+            color: 'var(--status-error)',
             borderRadius: '6px',
             padding: '2px 8px',
             fontSize: '11px',
@@ -146,6 +146,7 @@ export function ChatView({
   onConfirm,
   onCancel,
   onReset,
+  onFileSelect,
   workspaceId,
 }) {
   const bottomRef = useRef(null)
@@ -161,7 +162,7 @@ export function ChatView({
   }, [messages.length, status])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', animation: 'scale-in 200ms var(--ease-out) both' }}>
       {/* Message scroll area */}
       <div
         style={{
@@ -270,9 +271,9 @@ export function ChatView({
             style={{
               padding: '10px 14px',
               borderRadius: '10px',
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              color: '#f87171',
+              background: 'var(--error-soft)',
+              border: '1px solid rgba(255,77,106,0.2)',
+              color: 'var(--status-error)',
               fontSize: '13px',
               marginTop: '6px',
             }}
@@ -317,6 +318,7 @@ export function ChatView({
       {/* Sticky input */}
       <ChatInput
         onSend={onSend}
+        onFileSelect={onFileSelect}
         disabled={isBusy || awaitingConfirm}
         placeholder={
           awaitingConfirm

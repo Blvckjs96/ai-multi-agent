@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import Markdown from 'react-markdown'
 
 export function SpecOutput({ spec }) {
@@ -80,7 +81,7 @@ export function SpecOutput({ spec }) {
             if (!copied) e.currentTarget.style.background = 'transparent'
           }}
         >
-          {copied ? '✓ Copied' : 'Copy'}
+          {copied ? <><Check size={11} style={{ verticalAlign: 'middle' }} /> Copied</> : 'Copy'}
         </button>
       </div>
 

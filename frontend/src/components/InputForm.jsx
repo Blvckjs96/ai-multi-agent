@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 
 const PLACEHOLDER = `Describe your software project…
 
@@ -58,7 +59,6 @@ export function InputForm({ onSubmit, isRunning, initialValue = '' }) {
             width: '100%',
             background: 'transparent',
             border: 'none',
-            outline: 'none',
             color: 'var(--text-primary)',
             fontSize: '14px',
             lineHeight: '1.65',
@@ -93,7 +93,7 @@ export function InputForm({ onSubmit, isRunning, initialValue = '' }) {
               background: !isValid || isRunning ? 'var(--bg-hover)' : 'var(--accent)',
               border: 'none',
               borderRadius: 'var(--radius-lg)',
-              color: !isValid || isRunning ? 'var(--text-dim)' : '#fff',
+              color: !isValid || isRunning ? 'var(--text-dim)' : '#001218',
               cursor: !isValid || isRunning ? 'not-allowed' : 'pointer',
               fontSize: '13px',
               fontWeight: 600,
@@ -120,7 +120,7 @@ export function InputForm({ onSubmit, isRunning, initialValue = '' }) {
                 Generating
               </>
             ) : (
-              'Generate →'
+              <>Generate <ArrowRight size={13} style={{ verticalAlign: 'middle' }} /></>
             )}
           </button>
         </div>

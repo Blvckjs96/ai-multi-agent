@@ -135,7 +135,7 @@ export function ChangeTimeline({ workspaceId }) {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', animation: 'scale-in 180ms var(--ease-out) both' }}>
       {/* Left: entry list */}
       <div style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -169,7 +169,7 @@ export function ChangeTimeline({ workspaceId }) {
                     value={commitMsg}
                     onChange={(e) => setCommitMsg(e.target.value)}
                     placeholder="Commit message (optional)"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '4px 10px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', width: '200px' }}
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '4px 10px', fontSize: '12px', color: 'var(--text-primary)', width: '200px' }}
                   />
                   <button
                     onClick={handleCommit}

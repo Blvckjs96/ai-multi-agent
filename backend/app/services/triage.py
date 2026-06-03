@@ -225,7 +225,7 @@ def _build_result_from_skill(skill: SkillEntry) -> TriageResult:
     return TriageResult(
         allowed_tools=sorted(skill.tools),
         mcp_servers={k: {} for k in skill.mcp_servers},
-        skills=[skill.name],
+        skills=[],  # SkillEntry names don't map to Claude CLI slash commands — tool/model selection handles routing
         model=skill.model,
         effort=skill.effort,
     )
@@ -244,18 +244,16 @@ def _merge_results(skills: list[SkillEntry]) -> TriageResult:
 
     merged_tools: set[str] = set()
     merged_mcps: dict[str, object] = {}
-    names: list[str] = []
 
     for skill in skills:
         merged_tools.update(skill.tools)
         merged_mcps.update({k: {} for k in skill.mcp_servers})
-        names.append(skill.name)
 
     primary = skills[0]
     return TriageResult(
         allowed_tools=sorted(merged_tools),
         mcp_servers=merged_mcps,
-        skills=names,
+        skills=[],
         model=primary.model,
         effort=primary.effort,
     )

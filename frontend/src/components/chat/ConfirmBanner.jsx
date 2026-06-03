@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 
 function DiffLine({ line }) {
   if (!line && line !== '') return null
@@ -7,13 +8,13 @@ function DiffLine({ line }) {
   let bg = 'transparent'
 
   if (line.startsWith('+') && !line.startsWith('+++')) {
-    color = '#4ade80'
-    bg = 'rgba(74,222,128,0.05)'
+    color = 'var(--status-success)'
+    bg = 'rgba(0,255,157,0.05)'
   } else if (line.startsWith('-') && !line.startsWith('---')) {
-    color = '#f87171'
-    bg = 'rgba(248,113,113,0.05)'
+    color = 'var(--status-error)'
+    bg = 'rgba(255,77,106,0.05)'
   } else if (line.startsWith('@@')) {
-    color = '#67e8f9'
+    color = 'var(--accent-cyan)'
   } else if (
     line.startsWith('diff ') ||
     line.startsWith('index ') ||
@@ -86,12 +87,11 @@ export function ConfirmBanner({ onConfirm, onCancel, workspaceId }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '16px',
             flexShrink: 0,
             marginTop: '1px',
           }}
         >
-          ✦
+          <Sparkles size={16} />
         </div>
 
         {/* Copy */}

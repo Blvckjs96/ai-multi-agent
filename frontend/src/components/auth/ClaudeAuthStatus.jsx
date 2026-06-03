@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { apiFetch } from '../../lib/api'
 
 const POLL_INTERVAL = 30_000
 
@@ -10,7 +11,7 @@ export default function ClaudeAuthStatus() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/settings/claude-auth/status')
+      const res = await apiFetch('/api/v1/settings/claude-auth/status')
       if (res.ok) setAuth(await res.json())
     } catch { /* network not ready yet */ }
   }, [])
@@ -25,7 +26,7 @@ export default function ClaudeAuthStatus() {
     setLoading(true)
     setMsg(null)
     try {
-      const res = await fetch('/api/v1/settings/claude-auth/login', { method: 'POST' })
+      const res = await apiFetch('/api/v1/settings/claude-auth/login', { method: 'POST' })
       const data = await res.json()
       if (data.ok) {
         setMsg({ type: 'info', text: 'Check your browser…' })

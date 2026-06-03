@@ -111,7 +111,7 @@ function PlanDialog({ source, onClose, onApprove, onReject }) {
                 width: '100%', boxSizing: 'border-box', background: 'var(--bg-overlay)',
                 border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
                 padding: '8px 10px', fontSize: '13px', color: 'var(--text-primary)',
-                fontFamily: 'var(--f-ui)', resize: 'vertical', minHeight: '60px', outline: 'none',
+                fontFamily: 'var(--f-ui)', resize: 'vertical', minHeight: '60px',
               }}
               placeholder="Add feedback for regeneration…"
               value={note}

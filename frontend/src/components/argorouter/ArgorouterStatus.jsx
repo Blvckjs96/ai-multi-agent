@@ -53,7 +53,8 @@ export default function ArgorouterStatus() {
 
   const refresh = () => {
     setLoading(true)
-    fetch(`${API}/status`)
+    const token = localStorage.getItem('token')
+    fetch(`${API}/status`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => r.ok ? r.json() : { connected: false, error: 'HTTP ' + r.status })
       .then(setStatus)
       .catch((e) => setStatus({ connected: false, error: e.message }))

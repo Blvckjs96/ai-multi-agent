@@ -126,22 +126,25 @@ class ClaudeCliSession:
             cwd or "(default)",
         )
 
+        # Claude CLI ≥2.1.x dropped --input-format stream-json; --print mode reads
+        # the message from stdin as plain text (or no stdin for session resume).
+        stdin_payload: bytes | None = full_message.encode() if full_message else None
+
         self._process = await asyncio.create_subprocess_exec(
             *cmd,
-            stdin=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE if stdin_payload else asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
         )
 
-        # Send initial message as a stream-json user event
-        payload = json.dumps({"type": "user", "message": full_message}) + "\n"
-        if self._process.stdin is None:
-            raise RuntimeError("Claude CLI process stdin is not available")
-        self._process.stdin.write(payload.encode())
-        await self._process.stdin.drain()
-        self._process.stdin.close()
-        await self._process.stdin.wait_closed()
+        if stdin_payload is not None:
+            if self._process.stdin is None:
+                raise RuntimeError("Claude CLI process stdin is not available")
+            self._process.stdin.write(stdin_payload)
+            await self._process.stdin.drain()
+            self._process.stdin.close()
+            await self._process.stdin.wait_closed()
 
         asyncio.create_task(self._drain_stderr())
 
@@ -204,14 +207,15 @@ class ClaudeCliSession:
                 if tool not in allowed_tools:
                     allowed_tools.append(tool)
 
+        # --print is required for --output-format stream-json to work.
+        # --input-format stream-json was removed in Claude CLI ≥2.1.x.
         cmd: list[str] = [
             settings.CLAUDE_CLI_PATH,
+            "--print",
             "--output-format",
             "stream-json",
             "--verbose",
             "--include-partial-messages",
-            "--input-format",
-            "stream-json",
             "--allowedTools",
             ",".join(allowed_tools),
             "--model",
@@ -320,18 +324,31 @@ def _parse_event(raw: dict[str, Any]) -> CLIEvent | None:
     text: str | None = None
 
     if event_type == "assistant":
-        # Extract text from content blocks
+        # Extract text or thinking from content blocks
         message = raw.get("message") or {}
         content = message.get("content", [])
         if isinstance(content, list):
             for block in content:
-                if isinstance(block, dict) and block.get("type") == "text":
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "text":
                     text = block.get("text")
+                    subtype = "text"
                     break
-        # Partial message events carry text directly
+                if block.get("type") == "thinking":
+                    text = block.get("thinking")
+                    subtype = "thinking"
+                    break
+        # Partial message events carry delta directly
         if text is None and raw.get("is_partial"):
             delta = raw.get("delta") or {}
-            text = delta.get("text")
+            delta_type = delta.get("type", "text_delta")
+            if delta_type == "thinking_delta":
+                text = delta.get("thinking")
+                subtype = "thinking"
+            else:
+                text = delta.get("text")
+                subtype = "text"
 
     return CLIEvent(
         type=event_type,

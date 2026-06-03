@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { apiFetch } from '../../lib/api'
 
 const MODEL_TIERS = {
-  fast: { label: 'Fast', color: 'var(--accent-cyan)' },
-  balanced: { label: 'Balanced', color: '#a78bfa' },
-  powerful: { label: 'Powerful', color: '#f59e0b' },
+  fast:     { label: 'Fast',     color: 'var(--accent-cyan)' },
+  balanced: { label: 'Balanced', color: 'var(--accent-purple)' },
+  powerful: { label: 'Powerful', color: 'var(--accent-amber)' },
 }
 
 export default function ModelSelector({ compact = false }) {
@@ -15,7 +16,7 @@ export default function ModelSelector({ compact = false }) {
 
   const fetchModels = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/providers/llm/models')
+      const res = await apiFetch('/api/v1/providers/llm/models')
       if (!res.ok) return
       const data = await res.json()
       setModels(data.models || [])
@@ -43,7 +44,7 @@ export default function ModelSelector({ compact = false }) {
     setSwitching(true)
     setOpen(false)
     try {
-      const res = await fetch('/api/v1/providers/llm/select', {
+      const res = await apiFetch('/api/v1/providers/llm/select', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_id: modelId }),
