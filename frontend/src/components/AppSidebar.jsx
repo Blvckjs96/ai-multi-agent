@@ -2,235 +2,147 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   MessageSquare, LayoutDashboard, BookOpen, GitGraph,
   Clock, GitBranch, Network, Layers, Settings, Plus,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, FileText, Zap, BarChart2,
 } from 'lucide-react'
 
 const WORKSPACE_ITEMS = [
-  { id: 'chat',       label: 'Chat',      icon: MessageSquare },
-  { id: 'tasks',      label: 'Issues',    icon: LayoutDashboard },
-  { id: 'chiron',     label: 'Knowledge', icon: BookOpen },
-  { id: 'codegraph',  label: 'Codegraph', icon: GitGraph },
-  { id: 'timeline',   label: 'Timeline',  icon: Clock },
-  { id: 'github',     label: 'GitHub',    icon: GitBranch },
+  { id: 'chat',        label: 'Chat',        icon: MessageSquare },
+  { id: 'tasks',       label: 'Issues',      icon: LayoutDashboard },
+  { id: 'knowledge',   label: 'Knowledge',   icon: BookOpen },
+  { id: 'notes',       label: 'Notes',       icon: FileText },
+  { id: 'codegraph',   label: 'Codegraph',   icon: GitGraph },
+  { id: 'timeline',    label: 'Timeline',    icon: Clock },
+  { id: 'github',      label: 'GitHub',      icon: GitBranch },
 ]
 
-const SYSTEM_ITEMS = [
-  { id: 'argorouter', label: 'Router',    icon: Network },
-  { id: 'providers',  label: 'Providers', icon: Layers },
+const PLATFORM_ITEMS = [
+  { id: 'automations', label: 'Automations', icon: Zap },
+  { id: 'analytics',   label: 'Analytics',   icon: BarChart2 },
+  { id: 'argorouter',  label: 'Router',      icon: Network },
+  { id: 'providers',   label: 'Providers',   icon: Layers },
 ]
-
-const logoBoxStyle = {
-  width: 24, height: 24,
-  background: 'var(--accent-grad)',
-  borderRadius: 6,
-  flexShrink: 0,
-}
-
-const logoTextStyle = {
-  fontFamily: 'var(--f-display)',
-  fontSize: 16,
-  fontWeight: 700,
-  background: 'var(--accent-grad)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
-  whiteSpace: 'nowrap',
-}
-
-const sectionLabelStyle = {
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.08em',
-  color: 'var(--text-muted)',
-  textTransform: 'uppercase',
-  padding: '0 12px',
-  margin: '16px 0 4px',
-  whiteSpace: 'nowrap',
-  transition: 'opacity 200ms ease-out',
-}
 
 function NavItem({ item, active, collapsed, onModeChange }) {
-  const [hovered, setHovered] = useState(false)
   const Icon = item.icon
-
-  const handleClick = useCallback(() => onModeChange(item.id), [item.id, onModeChange])
-
-  const containerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: collapsed ? 0 : 10,
-    padding: collapsed ? '8px' : '8px 12px',
-    justifyContent: collapsed ? 'center' : 'flex-start',
-    cursor: 'pointer',
-    borderLeft: active ? '2px solid var(--accent-cyan)' : '2px solid transparent',
-    fontSize: 13,
-    fontWeight: 500,
-    transition: 'all 120ms ease-out',
-    background: active
-      ? 'rgba(0, 212, 255, 0.10)'
-      : hovered ? 'var(--bg-elevated)' : 'transparent',
-    color: active
-      ? 'var(--accent-cyan)'
-      : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
-    userSelect: 'none',
-    width: '100%',
-    textAlign: 'left',
-  }
-
-  const labelStyle = {
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    opacity: collapsed ? 0 : 1,
-    maxWidth: collapsed ? 0 : 140,
-    transition: 'opacity 200ms ease-out, max-width 200ms ease-out',
-  }
 
   return (
     <button
       type="button"
-      style={containerStyle}
-      onClick={handleClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       title={collapsed ? item.label : undefined}
+      onClick={() => onModeChange(item.id)}
+      className={[
+        'flex items-center w-full transition-all duration-100 border-l-2 select-none',
+        collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2',
+        active
+          ? 'border-argo-cyan bg-cyan-500/10 text-argo-cyan'
+          : 'border-transparent text-argo-secondary hover:bg-argo-elevated hover:text-argo-primary',
+      ].join(' ')}
     >
-      <Icon size={16} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-      <span style={labelStyle}>{item.label}</span>
+      <Icon size={15} strokeWidth={1.8} className="flex-shrink-0" />
+      {!collapsed && (
+        <span className="text-[13px] font-medium truncate">{item.label}</span>
+      )}
     </button>
+  )
+}
+
+function SectionLabel({ label, collapsed }) {
+  if (collapsed) {
+    return <div className="my-2 mx-2 border-t border-argo-border" />
+  }
+  return (
+    <p className="px-3 mt-4 mb-1 text-[10px] font-bold tracking-widest uppercase text-argo-muted select-none">
+      {label}
+    </p>
   )
 }
 
 export default function AppSidebar({ mode, onModeChange }) {
   const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('argo_nav_collapsed') === 'true'
-    } catch {
-      return false
-    }
+    try { return localStorage.getItem('argo_nav_collapsed') === 'true' } catch { return false }
   })
-
-  const [settingsHovered, setSettingsHovered] = useState(false)
   const [newChatHovered, setNewChatHovered] = useState(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem('argo_nav_collapsed', String(collapsed))
-    } catch {}
+    try { localStorage.setItem('argo_nav_collapsed', String(collapsed)) } catch {}
   }, [collapsed])
 
-  const toggleCollapsed = useCallback(() => setCollapsed(c => !c), [])
-  const handleNewChat = useCallback(() => onModeChange('chat'), [onModeChange])
-
-  const sidebarStyle = {
-    width: collapsed ? 52 : 220,
-    transition: 'width 250ms cubic-bezier(0.16, 1, 0.3, 1)',
-    background: 'var(--bg-surface)',
-    borderRight: '1px solid var(--border)',
-    height: '100dvh',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    flexShrink: 0,
-  }
-
-  const logoRowStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '16px 12px 12px',
-    flexShrink: 0,
-  }
-
-  const toggleBtnStyle = {
-    marginLeft: 'auto',
-    width: 28,
-    height: 28,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'var(--r-sm)',
-    border: '1px solid var(--border)',
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    cursor: 'pointer',
-    flexShrink: 0,
-    transition: 'background 120ms ease-out, color 120ms ease-out',
-  }
-
-  const newChatStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    margin: '8px 10px',
-    padding: '6px 12px',
-    borderRadius: 'var(--r-md)',
-    border: '1px solid var(--accent-cyan)',
-    background: newChatHovered ? 'rgba(0,212,255,0.12)' : 'rgba(0,212,255,0.05)',
-    color: 'var(--accent-cyan)',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    opacity: collapsed ? 0 : 1,
-    pointerEvents: collapsed ? 'none' : 'auto',
-    transition: 'opacity 200ms ease-out, background 120ms ease-out',
-    whiteSpace: 'nowrap',
-    userSelect: 'none',
-  }
-
-  const settingsBtnStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '10px',
-    cursor: 'pointer',
-    color: settingsHovered ? 'var(--text-primary)' : 'var(--text-muted)',
-    background: settingsHovered ? 'var(--bg-elevated)' : 'transparent',
-    transition: 'all 120ms ease-out',
-    flexShrink: 0,
-  }
-
-  const navScrollStyle = {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-  }
+  const toggle = useCallback(() => setCollapsed((c) => !c), [])
 
   return (
-    <aside style={sidebarStyle}>
-      <div style={logoRowStyle}>
-        <div style={logoBoxStyle} />
-        <span style={{ ...logoTextStyle, opacity: collapsed ? 0 : 1, transition: 'opacity 200ms ease-out' }}>
-          Argo
-        </span>
+    <aside
+      className="flex flex-col h-dvh bg-argo-surface border-r border-argo-border flex-shrink-0 overflow-hidden"
+      style={{
+        width: collapsed ? 52 : 220,
+        transition: 'width 250ms cubic-bezier(0.16,1,0.3,1)',
+      }}
+    >
+      {/* Logo row */}
+      <div className="flex items-center gap-2 px-3 py-4 flex-shrink-0">
+        <div
+          className="w-6 h-6 rounded-md flex-shrink-0"
+          style={{
+            background: 'var(--accent-grad)',
+            cursor: collapsed ? 'pointer' : 'default',
+          }}
+          onClick={collapsed ? toggle : undefined}
+          title={collapsed ? 'Expand sidebar' : undefined}
+        />
+        {!collapsed && (
+          <>
+            <span
+              className="text-base font-bold overflow-hidden whitespace-nowrap"
+              style={{
+                background: 'var(--accent-grad)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                maxWidth: 120,
+                transition: 'opacity 200ms ease-out, max-width 250ms cubic-bezier(0.16,1,0.3,1)',
+              }}
+            >
+              Argo
+            </span>
+            <button
+              type="button"
+              onClick={toggle}
+              className="ml-auto w-6 h-6 flex items-center justify-center rounded border border-argo-border text-argo-muted hover:text-argo-primary hover:bg-argo-elevated transition-colors"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft size={12} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* New Chat button — only visible when expanded */}
+      <div
+        style={{
+          opacity: collapsed ? 0 : 1,
+          pointerEvents: collapsed ? 'none' : 'auto',
+          transition: 'opacity 200ms ease-out',
+        }}
+      >
         <button
           type="button"
-          style={toggleBtnStyle}
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expand' : 'Collapse'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={() => onModeChange('chat')}
+          onMouseEnter={() => setNewChatHovered(true)}
+          onMouseLeave={() => setNewChatHovered(false)}
+          className="mx-2 mb-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-argo-cyan text-argo-cyan text-xs font-semibold transition-colors w-[calc(100%-16px)]"
+          style={{ background: newChatHovered ? 'rgba(0,212,255,0.10)' : 'rgba(0,212,255,0.04)' }}
         >
-          {collapsed
-            ? <ChevronRight size={14} />
-            : <ChevronLeft size={14} />
-          }
+          <Plus size={12} strokeWidth={2.5} />
+          New Chat
         </button>
       </div>
 
-      <button
-        type="button"
-        style={{...newChatStyle, border: '1px solid var(--accent-cyan)', cursor: 'pointer'}}
-        onClick={handleNewChat}
-        onMouseEnter={() => setNewChatHovered(true)}
-        onMouseLeave={() => setNewChatHovered(false)}
+      {/* Navigation */}
+      <nav
+        aria-label="Primary navigation"
+        className="flex-1 overflow-y-auto overflow-x-hidden"
       >
-        <Plus size={13} strokeWidth={2.2} />
-        New Chat
-      </button>
-
-      <nav aria-label="Primary navigation" style={navScrollStyle}>
-        <div style={{ ...sectionLabelStyle, opacity: collapsed ? 0 : 1 }}>Workspace</div>
-        {WORKSPACE_ITEMS.map(item => (
+        <SectionLabel label="Workspace" collapsed={collapsed} />
+        {WORKSPACE_ITEMS.map((item) => (
           <NavItem
             key={item.id}
             item={item}
@@ -240,8 +152,8 @@ export default function AppSidebar({ mode, onModeChange }) {
           />
         ))}
 
-        <div style={{ ...sectionLabelStyle, opacity: collapsed ? 0 : 1, marginTop: 20 }}>System</div>
-        {SYSTEM_ITEMS.map(item => (
+        <SectionLabel label="Platform" collapsed={collapsed} />
+        {PLATFORM_ITEMS.map((item) => (
           <NavItem
             key={item.id}
             item={item}
@@ -252,15 +164,21 @@ export default function AppSidebar({ mode, onModeChange }) {
         ))}
       </nav>
 
-      <div
-        style={settingsBtnStyle}
+      {/* Settings footer */}
+      <button
+        type="button"
         onClick={() => onModeChange('settings')}
-        onMouseEnter={() => setSettingsHovered(true)}
-        onMouseLeave={() => setSettingsHovered(false)}
-        title="Settings"
+        title={collapsed ? 'Settings' : undefined}
+        className={[
+          'flex items-center gap-2.5 w-full border-t border-argo-border px-3 py-3',
+          'text-argo-muted hover:text-argo-primary hover:bg-argo-elevated transition-colors',
+          collapsed ? 'justify-center' : '',
+        ].join(' ')}
+        style={{ background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
       >
-        <Settings size={16} strokeWidth={1.8} />
-      </div>
+        <Settings size={15} strokeWidth={1.8} />
+        {!collapsed && <span className="text-[13px] font-medium">Settings</span>}
+      </button>
     </aside>
   )
 }

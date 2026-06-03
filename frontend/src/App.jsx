@@ -38,6 +38,16 @@ import { useConversations } from './hooks/useConversations'
 
 const AGENT_NAMES = ['planner', 'engineer', 'cost_estimator', 'writer']
 
+// Temporary placeholder for panels not yet implemented
+function PlaceholderPanel({ label, phase }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-argo-muted">
+      <span className="text-2xl font-bold text-argo-elevated">{label}</span>
+      <span className="text-xs">Coming in {phase}</span>
+    </div>
+  )
+}
+
 // ── Chat standalone panel ─────────────────────────────────────────────────────
 
 function ChatPanel({ workspaceId, activeConversationId, onLoadMessages }) {
@@ -278,6 +288,7 @@ export default function App() {
           {mode === 'tasks'       && <IdeLayout workspaceId={workspaceId} createWorkspace={ws.createWorkspace} workspacePath={ws.activeWorkspace?.path ?? null} workspaceName={ws.activeWorkspace?.name ?? null} branchName={null} />}
           {mode === 'chat'        && <ChatPanel key={convs.activeId ?? 'no-conv'} workspaceId={workspaceId} activeConversationId={convs.activeId} onLoadMessages={convs.loadMessages} />}
           {mode === 'pipeline'    && <PipelinePanel />}
+          {mode === 'knowledge'   && <ChironPanel workspaceId={workspaceId} />}
           {mode === 'chiron'      && <ChironPanel workspaceId={workspaceId} />}
           {mode === 'argorouter'  && <ArgorouterPanel />}
           {mode === 'codegraph'   && <CodegraphPanel workspaceId={workspaceId} repoPath={ws.activeWorkspace?.path ?? null} />}
@@ -285,6 +296,11 @@ export default function App() {
           {mode === 'github'      && <GitHubPanel />}
           {mode === 'providers'   && <ProvidersPanel />}
           {mode === 'settings'    && <SettingsPanel />}
+          {/* Phase 2–4 panels — placeholders until implemented */}
+          {mode === 'notes'       && <PlaceholderPanel label="Notes" phase="Phase 2" />}
+          {mode === 'workspace'   && <PlaceholderPanel label="Workspace" phase="Phase 2" />}
+          {mode === 'automations' && <PlaceholderPanel label="Automations" phase="Phase 4" />}
+          {mode === 'analytics'   && <PlaceholderPanel label="Analytics" phase="Phase 4" />}
         </div>
 
         <StatusBar mode={mode} />
