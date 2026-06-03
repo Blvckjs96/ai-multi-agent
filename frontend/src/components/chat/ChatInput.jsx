@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { SendHorizonal, Paperclip, Globe, Mic } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
+import KnowledgePicker from './KnowledgePicker'
 
 export function ChatInput({
   onSend,
@@ -9,11 +10,12 @@ export function ChatInput({
   onFileSelect,
   onWebSearchToggle,
   webSearch = false,
-  onHashTrigger,
+  workspaceId,
 }) {
   const ref = useRef(null)
   const fileInputRef = useRef(null)
   const [clipHovered, setClipHovered] = useState(false)
+  const [showKbPicker, setShowKbPicker] = useState(false)
 
   const submit = useCallback(() => {
     const val = ref.current?.value?.trim()
@@ -33,12 +35,8 @@ export function ChatInput({
   const onInput = useCallback((e) => {
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px'
-    // Trigger # knowledge picker when value ends with #
-    if (onHashTrigger) {
-      const val = e.target.value
-      onHashTrigger(val.endsWith('#'))
-    }
-  }, [onHashTrigger])
+    setShowKbPicker(e.target.value.endsWith('#'))
+  }, [])
 
   const handleFileClick = useCallback(() => {
     if (!disabled && fileInputRef.current) {
@@ -52,6 +50,17 @@ export function ChatInput({
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [onFileSelect])
+
+  const handleKbSelect = useCallback((name) => {
+    if (!ref.current) return
+    const current = ref.current.value
+    // Remove the trailing # that triggered the picker
+    ref.current.value = current.replace(/#$/, '') + `[kb: ${name}] `
+    ref.current.style.height = 'auto'
+    ref.current.style.height = Math.min(ref.current.scrollHeight, 180) + 'px'
+    ref.current.focus()
+    setShowKbPicker(false)
+  }, [])
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault()
@@ -189,17 +198,26 @@ export function ChatInput({
         </button>
       </Tooltip>
 
-      <textarea
-        ref={ref}
-        rows={1}
-        onKeyDown={onKey}
-        onInput={onInput}
-        placeholder={placeholder}
-        disabled={disabled}
-        style={textareaStyle}
-        onFocus={(e) => (e.target.style.borderColor = 'var(--border-accent)')}
-        onBlur={(e) => (e.target.style.borderColor = 'var(--border-strong)')}
-      />
+      <div style={{ position: 'relative', flex: 1 }}>
+        {showKbPicker && (
+          <KnowledgePicker
+            workspaceId={workspaceId}
+            onSelect={handleKbSelect}
+            onClose={() => setShowKbPicker(false)}
+          />
+        )}
+        <textarea
+          ref={ref}
+          rows={1}
+          onKeyDown={onKey}
+          onInput={onInput}
+          placeholder={placeholder}
+          disabled={disabled}
+          style={{ ...textareaStyle, width: '100%' }}
+          onFocus={(e) => (e.target.style.borderColor = 'var(--border-accent)')}
+          onBlur={(e) => (e.target.style.borderColor = 'var(--border-strong)')}
+        />
+      </div>
 
       <button type="button" onClick={submit} disabled={disabled} aria-label="Send" style={sendBtnStyle}>
         <SendHorizonal size={16} />
