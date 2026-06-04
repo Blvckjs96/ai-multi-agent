@@ -88,6 +88,16 @@ def get_note_service(db: DBSession) -> NoteService:
 
 NoteSvc = Annotated[NoteService, Depends(get_note_service)]
 
+from app.services.tool import ToolService
+
+
+def get_tool_service(db: DBSession) -> ToolService:
+    """Create ToolService instance with database session."""
+    return ToolService(db)
+
+
+ToolSvc = Annotated[ToolService, Depends(get_tool_service)]
+
 # === Authentication Dependencies ===
 
 from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError

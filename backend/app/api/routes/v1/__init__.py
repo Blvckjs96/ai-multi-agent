@@ -27,6 +27,7 @@ from app.api.routes.v1 import argorouter
 from app.api.routes.v1 import coworkers
 from app.api.routes.v1 import feedback
 from app.api.routes.v1 import notes
+from app.api.routes.v1 import tools
 
 # Argon knowledge-base modules
 from app.argon.api import (
@@ -128,6 +129,9 @@ v1_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 
 # Notes (personal notes with pin support)
 v1_router.include_router(notes.router)
+
+# Tools (user-defined Python functions callable by AI)
+v1_router.include_router(tools.router)
 
 # ---------------------------------------------------------------------------
 # Argon — knowledge-base engine (wiki, sources, MRP, skills, RBAC, admin)

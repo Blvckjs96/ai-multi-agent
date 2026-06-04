@@ -15,6 +15,7 @@ from app.db.models.task import Task
 from app.db.models.task_session import TaskSession
 from app.db.models.provider_config import UserProviderConfig
 from app.db.models.note import Note
+from app.db.models.tool import Tool
 
 __all__ = [
     "User",
@@ -36,4 +37,5 @@ __all__ = [
     "TaskSession",
     "UserProviderConfig",
     "Note",
+    "Tool",
 ]
