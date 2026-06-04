@@ -25,6 +25,7 @@ import SettingsPanel from './components/settings/SettingsPanel'
 import ArgorouterPanel from './components/argorouter/ArgorouterPanel'
 import CodegraphPanel from './components/codegraph/CodegraphPanel'
 import WorkspacePanel from './components/workspace/WorkspacePanel'
+import NotesPanel from './components/notes/NotesPanel'
 
 // Argo IDE layout
 import { IdeLayout } from './components/layout/IdeLayout'
@@ -304,7 +305,7 @@ export default function App() {
           {mode === 'providers'   && <ProvidersPanel />}
           {mode === 'settings'    && <SettingsPanel />}
           {/* Phase 2–4 panels — placeholders until implemented */}
-          {mode === 'notes'       && <PlaceholderPanel label="Notes" phase="Phase 2" />}
+          {mode === 'notes'       && <NotesPanel workspaceId={workspaceId} />}
           {mode === 'workspace'   && <WorkspacePanel workspaceId={workspaceId} />}
           {mode === 'automations' && <PlaceholderPanel label="Automations" phase="Phase 4" />}
           {mode === 'analytics'   && <PlaceholderPanel label="Analytics" phase="Phase 4" />}
