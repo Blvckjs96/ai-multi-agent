@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChatBubble } from './ChatBubble'
 import { ChatInput } from './ChatInput'
 import { ConfirmBanner } from './ConfirmBanner'
 import { STATUS } from '../../hooks/useChat'
+import { API_ORIGIN } from '../../lib/api'
 
 // ── Spinner animation (keyframe in index.css) ─────────────────────────────
 function Spinner({ color = '#00d4ff', size = 14 }) {
@@ -148,8 +149,30 @@ export function ChatView({
   onReset,
   onFileSelect,
   workspaceId,
+  conversationId,
+  webSearch,
+  onWebSearchToggle,
 }) {
   const bottomRef = useRef(null)
+  const [feedbackState, setFeedbackState] = useState({})
+
+  const handleFeedback = useCallback((messageId, rating) => {
+    setFeedbackState((prev) => ({ ...prev, [messageId]: rating }))
+    const token = localStorage.getItem('token')
+    fetch(`${API_ORIGIN}/api/v1/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        conversation_id: conversationId ?? 'unknown',
+        message_id: messageId,
+        rating,
+      }),
+    }).catch(() => {})
+  }, [conversationId])
+
   const isPlanning = status === STATUS.PLANNING
   const isExecuting = status === STATUS.EXECUTING
   const isBusy = isPlanning || isExecuting
@@ -248,7 +271,16 @@ export function ChatView({
 
         {/* Message list */}
         {messages.map((m) => (
-          <ChatBubble key={m.id} message={m} />
+          <ChatBubble
+            key={m.id}
+            message={m}
+            onFeedback={
+              m.role === 'assistant' && m.type !== 'tool_use' && m.type !== 'tool_result' && m.subtype !== 'thinking'
+                ? (rating) => handleFeedback(m.id, rating)
+                : undefined
+            }
+            feedback={feedbackState[m.id]}
+          />
         ))}
 
         {/* Typing indicator while planning (shows between user message and assistant response) */}
@@ -320,6 +352,9 @@ export function ChatView({
         onSend={onSend}
         onFileSelect={onFileSelect}
         disabled={isBusy || awaitingConfirm}
+        workspaceId={workspaceId}
+        webSearch={webSearch}
+        onWebSearchToggle={onWebSearchToggle}
         placeholder={
           awaitingConfirm
             ? 'Review the plan above, then confirm or cancel…'

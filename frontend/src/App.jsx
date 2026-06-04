@@ -53,6 +53,7 @@ function PlaceholderPanel({ label, phase }) {
 function ChatPanel({ workspaceId, activeConversationId, onLoadMessages }) {
   const [view, setView]             = useState('chat')
   const [coworkerId, setCoworkerId] = useState(null)
+  const [webSearch, setWebSearch]   = useState(false)
   const chat = useChat(activeConversationId)
   const localModel = useLocalModel()   // ArgoHarness local model override
 
@@ -118,7 +119,7 @@ function ChatPanel({ workspaceId, activeConversationId, onLoadMessages }) {
       </div>
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <div style={{ flex: 1, display: view === 'chat' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
-          <ChatView messages={chat.messages} status={chat.status} error={chat.error} activeTools={chat.activeTools} stats={chat.stats} onSend={sendWithWorkspace} onConfirm={chat.confirm} onCancel={chat.cancel} onReset={chat.reset} onFileSelect={handleFileSelect} workspaceId={workspaceId} />
+          <ChatView messages={chat.messages} status={chat.status} error={chat.error} activeTools={chat.activeTools} stats={chat.stats} onSend={sendWithWorkspace} onConfirm={chat.confirm} onCancel={chat.cancel} onReset={chat.reset} onFileSelect={handleFileSelect} workspaceId={workspaceId} conversationId={activeConversationId} webSearch={webSearch} onWebSearchToggle={setWebSearch} />
         </div>
         <div style={{ flex: 1, display: view === 'terminal' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
           <TerminalView events={chat.rawEvents} />
