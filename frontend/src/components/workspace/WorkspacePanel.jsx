@@ -18,11 +18,11 @@ export default function WorkspacePanel({ workspaceId }) {
   const [tab, setTab] = useState('models')
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-1 px-4 border-b border-argo-border bg-argo-surface flex-shrink-0 h-11">
+      <div role="tablist" aria-label="Workspace sections" className="flex items-center gap-1 px-4 border-b border-argo-border bg-argo-surface flex-shrink-0 h-11">
         {TABS.map((t) => {
           const Icon = t.icon
           return (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+            <button key={t.id} role="tab" aria-selected={tab === t.id} type="button" onClick={() => setTab(t.id)}
               className={['flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-b-2',
                 tab === t.id ? 'border-argo-cyan text-argo-cyan' : 'border-transparent text-argo-muted hover:text-argo-secondary',
               ].join(' ')}>
