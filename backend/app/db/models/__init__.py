@@ -14,6 +14,7 @@ from app.db.models.change_log import ChangeLog
 from app.db.models.task import Task
 from app.db.models.task_session import TaskSession
 from app.db.models.provider_config import UserProviderConfig
+from app.db.models.note import Note
 
 __all__ = [
     "User",
@@ -34,4 +35,5 @@ __all__ = [
     "Task",
     "TaskSession",
     "UserProviderConfig",
+    "Note",
 ]
