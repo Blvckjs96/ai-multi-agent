@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
-import { SendHorizonal, Paperclip, Globe, Mic } from 'lucide-react'
+import { SendHorizonal, Paperclip, Globe, Mic, MicOff, Loader2 } from 'lucide-react'
 import Tooltip from '../ui/Tooltip'
 import KnowledgePicker from './KnowledgePicker'
+import { useAudio } from '../../hooks/useAudio'
 
 export function ChatInput({
   onSend,
@@ -16,6 +17,24 @@ export function ChatInput({
   const fileInputRef = useRef(null)
   const [clipHovered, setClipHovered] = useState(false)
   const [showKbPicker, setShowKbPicker] = useState(false)
+  const audio = useAudio()
+
+  const handleMicClick = useCallback(async () => {
+    if (audio.transcribing) return
+    if (audio.recording) {
+      const text = await audio.stop()
+      if (text && ref.current) {
+        ref.current.value = ref.current.value
+          ? ref.current.value + ' ' + text
+          : text
+        ref.current.style.height = 'auto'
+        ref.current.style.height = Math.min(ref.current.scrollHeight, 180) + 'px'
+        ref.current.focus()
+      }
+    } else {
+      await audio.start()
+    }
+  }, [audio])
 
   const submit = useCallback(() => {
     const val = ref.current?.value?.trim()
@@ -103,9 +122,16 @@ export function ChatInput({
 
   const micBtnStyle = {
     ...iconBtnBase,
-    color: 'var(--text-muted)',
-    opacity: 0.35,
-    cursor: 'not-allowed',
+    color: audio.recording
+      ? '#ff4d6a'
+      : audio.transcribing
+        ? 'var(--accent-cyan)'
+        : 'var(--text-muted)',
+    background: audio.recording ? 'rgba(255,77,106,0.12)' : 'transparent',
+    border: audio.recording ? '1px solid rgba(255,77,106,0.3)' : '1px solid transparent',
+    opacity: disabled ? 0.4 : 1,
+    cursor: disabled ? 'default' : 'pointer',
+    animation: audio.recording ? 'argo-pulse 1.2s ease-in-out infinite' : 'none',
   }
 
   const sendBtnStyle = {
@@ -187,14 +213,29 @@ export function ChatInput({
         </button>
       </Tooltip>
 
-      <Tooltip content="Voice input — coming in Phase 4" side="top">
+      <Tooltip
+        content={
+          audio.transcribing
+            ? 'Transcribing…'
+            : audio.recording
+              ? 'Click to stop recording'
+              : 'Voice input'
+        }
+        side="top"
+      >
         <button
           type="button"
-          disabled
-          aria-label="Voice input (coming soon)"
+          onClick={handleMicClick}
+          disabled={disabled || audio.transcribing}
+          aria-label={audio.recording ? 'Stop recording' : 'Start voice input'}
           style={micBtnStyle}
         >
-          <Mic size={16} />
+          {audio.transcribing
+            ? <Loader2 size={16} style={{ animation: 'argo-spin 0.75s linear infinite' }} />
+            : audio.recording
+              ? <MicOff size={16} />
+              : <Mic size={16} />
+          }
         </button>
       </Tooltip>
 

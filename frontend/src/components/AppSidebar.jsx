@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   MessageSquare, LayoutDashboard, BookOpen, GitGraph,
   Clock, GitBranch, Network, Layers, Settings, Plus,
-  ChevronLeft, FileText, Zap, BarChart2,
+  ChevronLeft, FileText, Zap, BarChart2, ThumbsUp,
 } from 'lucide-react'
 
 const WORKSPACE_ITEMS = [
@@ -16,10 +16,11 @@ const WORKSPACE_ITEMS = [
 ]
 
 const PLATFORM_ITEMS = [
-  { id: 'automations', label: 'Automations', icon: Zap },
-  { id: 'analytics',   label: 'Analytics',   icon: BarChart2 },
-  { id: 'argorouter',  label: 'Router',      icon: Network },
-  { id: 'providers',   label: 'Providers',   icon: Layers },
+  { id: 'automations',  label: 'Automations', icon: Zap },
+  { id: 'analytics',    label: 'Analytics',   icon: BarChart2 },
+  { id: 'evaluations',  label: 'Evaluations', icon: ThumbsUp },
+  { id: 'argorouter',   label: 'Router',      icon: Network },
+  { id: 'providers',    label: 'Providers',   icon: Layers },
 ]
 
 function NavItem({ item, active, collapsed, onModeChange }) {

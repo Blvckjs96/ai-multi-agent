@@ -26,6 +26,9 @@ import ArgorouterPanel from './components/argorouter/ArgorouterPanel'
 import CodegraphPanel from './components/codegraph/CodegraphPanel'
 import WorkspacePanel from './components/workspace/WorkspacePanel'
 import NotesPanel from './components/notes/NotesPanel'
+import AutomationsPanel from './components/automations/AutomationsPanel'
+import AnalyticsDashboard from './components/analytics/AnalyticsDashboard'
+import EvaluationsPanel from './components/evaluations/EvaluationsPanel'
 
 // Argo IDE layout
 import { IdeLayout } from './components/layout/IdeLayout'
@@ -307,8 +310,9 @@ export default function App() {
           {/* Phase 2–4 panels — placeholders until implemented */}
           {mode === 'notes'       && <NotesPanel workspaceId={workspaceId} />}
           {mode === 'workspace'   && <WorkspacePanel workspaceId={workspaceId} />}
-          {mode === 'automations' && <PlaceholderPanel label="Automations" phase="Phase 4" />}
-          {mode === 'analytics'   && <PlaceholderPanel label="Analytics" phase="Phase 4" />}
+          {mode === 'automations' && <AutomationsPanel workspaceId={workspaceId} />}
+          {mode === 'analytics'   && <AnalyticsDashboard workspaceId={workspaceId} />}
+          {mode === 'evaluations' && <EvaluationsPanel />}
         </div>
 
         <StatusBar mode={mode} />
