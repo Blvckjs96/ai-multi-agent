@@ -16,6 +16,8 @@ from app.db.models.task_session import TaskSession
 from app.db.models.provider_config import UserProviderConfig
 from app.db.models.note import Note
 from app.db.models.tool import Tool
+from app.db.models.workspace_skill import WorkspaceSkill
+from app.db.models.prompt import Prompt
 
 __all__ = [
     "User",
@@ -38,4 +40,6 @@ __all__ = [
     "UserProviderConfig",
     "Note",
     "Tool",
+    "WorkspaceSkill",
+    "Prompt",
 ]

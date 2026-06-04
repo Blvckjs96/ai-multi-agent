@@ -98,6 +98,26 @@ def get_tool_service(db: DBSession) -> ToolService:
 
 ToolSvc = Annotated[ToolService, Depends(get_tool_service)]
 
+from app.services.workspace_skill import WorkspaceSkillService
+
+
+def get_workspace_skill_service(db: DBSession) -> WorkspaceSkillService:
+    """Create WorkspaceSkillService instance with database session."""
+    return WorkspaceSkillService(db)
+
+
+WorkspaceSkillSvc = Annotated[WorkspaceSkillService, Depends(get_workspace_skill_service)]
+
+from app.services.prompt_svc import PromptService
+
+
+def get_prompt_service(db: DBSession) -> PromptService:
+    """Create PromptService instance with database session."""
+    return PromptService(db)
+
+
+PromptSvc = Annotated[PromptService, Depends(get_prompt_service)]
+
 # === Authentication Dependencies ===
 
 from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError
