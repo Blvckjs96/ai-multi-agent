@@ -25,6 +25,7 @@ from app.api.routes.v1 import settings
 from app.api.routes.v1 import codegraph
 from app.api.routes.v1 import argorouter
 from app.api.routes.v1 import coworkers
+from app.api.routes.v1 import feedback
 
 # Argon knowledge-base modules
 from app.argon.api import (
@@ -120,6 +121,9 @@ v1_router.include_router(argorouter.router)
 
 # AI coworker personas
 v1_router.include_router(coworkers.router)
+
+# Message feedback (thumbs up/down ratings)
+v1_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 
 # ---------------------------------------------------------------------------
 # Argon — knowledge-base engine (wiki, sources, MRP, skills, RBAC, admin)
