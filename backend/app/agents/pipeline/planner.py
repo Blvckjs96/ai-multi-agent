@@ -1,11 +1,16 @@
 """Planner agent — breaks a project description into concrete phases."""
 
+import asyncio
+import logging
+
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.settings import ModelSettings
 
+from app.agents import skill_library
 from app.agents.pipeline.model_router import get_model_for_agent
+
+logger = logging.getLogger(__name__)
 
 PIPELINE_MODEL = "claude-haiku-4-5"  # kept for legacy imports
 
@@ -45,6 +50,9 @@ class PlannerOutput(BaseModel):
 async def run_planner(description: str) -> PlannerOutput:
     """Run the planner agent and return structured output.
 
+    Injects planning skill guidance (blueprint, TDD, API design) when relevant
+    keywords are detected in the project description.
+
     Args:
         description: User's project description.
 
@@ -53,13 +61,27 @@ async def run_planner(description: str) -> PlannerOutput:
     """
     model, _ = await get_model_for_agent("planner")
 
+    guidance = await asyncio.get_event_loop().run_in_executor(
+        None, skill_library.get_guidance, description, "planner"
+    )
+
+    system_prompt = PLANNER_SYSTEM_PROMPT
+    if guidance:
+        selected = skill_library.select_skills(description, "planner")
+        system_prompt = (
+            f"{PLANNER_SYSTEM_PROMPT}\n\n"
+            "## Planning Skill Guidance\n"
+            f"Skills selected for this task: {', '.join(selected)}.\n"
+            "Use the methodology and templates below when structuring phases and deliverables.\n\n"
+            f"{guidance}"
+        )
+        logger.debug("Planner skills injected: %s (%d chars)", selected, len(guidance))
+
     agent = Agent[None, PlannerOutput](
         model=model,
         model_settings=ModelSettings(temperature=0.3),
-        system_prompt=PLANNER_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         output_type=PlannerOutput,
     )
-    result = await agent.run(
-        f"Create a project plan for the following project:\n\n{description}"
-    )
+    result = await agent.run(f"Create a project plan for the following project:\n\n{description}")
     return result.output

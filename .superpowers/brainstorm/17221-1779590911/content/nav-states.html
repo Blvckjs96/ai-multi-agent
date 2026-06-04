@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Argo UI — Nav States + Chat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #070809;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h2 { font-size: 15px; font-weight: 700; color: #e0e0e0; margin-bottom: 6px; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 24px; }
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #555; margin-bottom: 10px; }
+
+  .demo-row { display: flex; gap: 24px; margin-bottom: 32px; align-items: flex-start; }
+  .demo-box { flex: 1; }
+  .demo-title { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .demo-title .badge { font-size: 9px; padding: 1px 6px; background: #00d4ff15; border: 1px solid #00d4ff30; border-radius: 10px; color: #00d4ff; }
+
+  /* ─── App shell ─── */
+  .app-shell {
+    border: 1px solid #1a1e22;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    height: 320px;
+    background: #080a0c;
+  }
+
+  /* ─── Side nav expanded ─── */
+  .side-nav-expanded {
+    width: 220px;
+    flex-shrink: 0;
+    background: #0c0e11;
+    border-right: 1px solid #1a1e22;
+    display: flex;
+    flex-direction: column;
+    transition: width .25s ease;
+  }
+  .nav-header {
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid #1a1e22;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-logo {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, #00d4ff, #00ff9d);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #001218;
+    flex-shrink: 0;
+  }
+  .nav-brand { font-size: 13px; font-weight: 700; color: #e0e0e0; letter-spacing: -.02em; flex: 1; }
+  .nav-collapse-btn {
+    width: 20px; height: 20px;
+    background: #1a1e22;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 9px; color: #666;
+    flex-shrink: 0;
+  }
+  .nav-section-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: #444;
+    padding: 10px 12px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; margin: 1px 6px;
+    border-radius: 6px; cursor: pointer;
+    transition: background .12s;
+  }
+  .nav-item:hover { background: #1a1e22; }
+  .nav-item.active { background: #00ff9d12; border: 1px solid #00ff9d20; }
+  .nav-item-icon {
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .nav-item-label { font-size: 12px; color: #999; }
+  .nav-item.active .nav-item-label { color: #00ff9d; font-weight: 600; }
+  .nav-footer {
+    padding: 8px;
+    border-top: 1px solid #1a1e22;
+    margin-top: auto;
+  }
+  .nav-new-chat {
+    background: #00d4ff10;
+    border: 1px solid #00d4ff25;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 11px; color: #00d4ff;
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+
+  /* ─── Side nav collapsed (icon rail) ─── */
+  .side-nav-collapsed {
+    width: 52px;
+    flex-shrink: 0;
+    background: #0c0e11;
+    border-right: 1px solid #1a1e22;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    gap: 4px;
+  }
+  .rail-logo {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #00d4ff, #00ff9d);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #001218;
+    margin-bottom: 8px;
+  }
+  .rail-divider { width: 28px; height: 1px; background: #1a1e22; margin: 4px 0; }
+  .rail-item {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+    transition: background .12s;
+    position: relative;
+  }
+  .rail-item:hover { background: #1a1e22; }
+  .rail-item.active { background: #00ff9d12; border: 1px solid #00ff9d25; }
+  .rail-expand-btn {
+    width: 28px; height: 28px;
+    background: #1a1e22;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #555;
+    cursor: pointer; margin-bottom: 4px;
+  }
+
+  /* ─── Chat history sidebar ─── */
+  .chat-history {
+    width: 200px;
+    flex-shrink: 0;
+    background: #0a0c0f;
+    border-right: 1px solid #141618;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ch-header {
+    padding: 10px 10px 8px;
+    border-bottom: 1px solid #141618;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ch-title { font-size: 11px; font-weight: 600; color: #888; }
+  .ch-new-btn {
+    width: 22px; height: 22px;
+    background: #00d4ff10; border: 1px solid #00d4ff25;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #00d4ff; cursor: pointer;
+  }
+  .ch-group-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: #444;
+    padding: 8px 10px 3px;
+  }
+  .ch-item {
+    padding: 5px 10px; cursor: pointer;
+    border-radius: 5px; margin: 1px 4px;
+    transition: background .12s;
+  }
+  .ch-item:hover { background: #141618; }
+  .ch-item.active { background: #00d4ff0c; border: 1px solid #00d4ff18; }
+  .ch-item-title { font-size: 11px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-item.active .ch-item-title { color: #e8e8e8; }
+  .ch-item-meta { font-size: 9px; color: #444; margin-top: 1px; }
+  .ch-item.active .ch-item-meta { color: #00d4ff; }
+
+  /* ─── Chat main ─── */
+  .chat-main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    background: #080a0c;
+    overflow: hidden;
+  }
+  .chat-messages {
+    flex: 1;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow: hidden;
+  }
+
+  /* User bubble */
+  .msg-user {
+    align-self: flex-end;
+    max-width: 65%;
+    background: #102010;
+    border: 1px solid #00ff9d20;
+    border-radius: 14px 14px 3px 14px;
+    padding: 8px 12px;
+    font-size: 12px; color: #d0d0d0;
+    line-height: 1.5;
+  }
+
+  /* Assistant bubble */
+  .msg-assistant { display: flex; gap: 8px; max-width: 90%; }
+  .msg-avatar {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, #00d4ff, #00ff9d);
+    border-radius: 50%;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .msg-bubble {
+    background: #0d1014;
+    border: 1px solid #1a1e22;
+    border-radius: 14px 14px 14px 3px;
+    padding: 10px 12px;
+    font-size: 11.5px; color: #aaa;
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  /* Pipeline inline block */
+  .pipeline-block {
+    background: #030d03;
+    border: 1px solid #00ff9d18;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 6px;
+  }
+  .pipeline-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: #00ff9d88;
+    margin-bottom: 6px;
+  }
+  .pipeline-steps { display: flex; flex-direction: column; gap: 4px; }
+  .pipeline-step {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 10.5px;
+  }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .step-dot.done { background: #00ff9d; }
+  .step-dot.running {
+    background: #00d4ff;
+    box-shadow: 0 0 6px #00d4ff80;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .step-dot.pending { background: #222; border: 1px solid #333; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .6; transform: scale(.85); }
+  }
+  .step-name { color: #888; }
+  .step-name.done { color: #00ff9d; }
+  .step-name.running { color: #00d4ff; }
+  .step-time { margin-left: auto; font-size: 9px; color: #444; }
+
+  /* Typing animation */
+  .typing-indicator {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 0 2px;
+  }
+  .typing-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #00d4ff;
+    animation: typing-bounce 1.4s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .2s; }
+  .typing-dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* Tool use block */
+  .tool-block {
+    background: #0a0f1a;
+    border: 1px solid #00d4ff15;
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-top: 5px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: #00d4ff88;
+  }
+  .tool-spinner {
+    width: 10px; height: 10px;
+    border: 1.5px solid #00d4ff30;
+    border-top-color: #00d4ff;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Chat input */
+  .chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid #141618;
+    background: #080a0c;
+  }
+  .chat-input-box {
+    background: #0d1014;
+    border: 1px solid #1e2226;
+    border-radius: 12px;
+    padding: 8px 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .input-placeholder { font-size: 12px; color: #333; flex: 1; }
+  .input-btn {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; cursor: pointer;
+    color: #555;
+    background: transparent;
+  }
+  .input-btn.send {
+    background: linear-gradient(135deg, #00d4ff20, #00ff9d15);
+    border: 1px solid #00d4ff30;
+    color: #00d4ff;
+  }
+
+  /* Main content placeholder (for non-chat modes) */
+  .main-content {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: #333; font-size: 13px;
+    background: #080a0c;
+  }
+
+  /* Layout labels */
+  .layout-annotation {
+    position: relative;
+    margin-top: 6px;
+    display: flex;
+    gap: 0;
+  }
+  .ann-block {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    color: #555;
+    padding-top: 4px;
+    border-top: 1px solid #1a1e22;
+  }
+  .ann-block.highlight { color: #00d4ff88; border-top-color: #00d4ff30; }
+
+  /* Tabs at top of page */
+  .page-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+  }
+  .page-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    background: #0f1215;
+    border: 1px solid #1a1e22;
+    color: #666;
+    transition: all .15s;
+  }
+  .page-tab.active { background: #00d4ff12; border-color: #00d4ff30; color: #00d4ff; }
+</style>
+</head>
+<body>
+
+<h2>Side Nav + Chat Layout — Thiết kế chi tiết</h2>
+<p class="subtitle">Expanded nav có thể collapse → icon rail. Chat có history sidebar + pipeline inline với animation.</p>
+
+<!-- ════ ROW 1: NAV STATES ════ -->
+<div class="section-label" style="margin-bottom:10px;">Trạng thái Side Nav</div>
+<div class="demo-row" style="align-items:stretch;">
+
+  <!-- EXPANDED NAV -->
+  <div class="demo-box">
+    <div class="demo-title">Expanded <span class="badge">220px</span></div>
+    <div class="app-shell">
+      <div class="side-nav-expanded">
+        <div class="nav-header">
+          <div class="nav-logo">A</div>
+          <span class="nav-brand">Argo</span>
+          <div class="nav-collapse-btn" title="Thu gọn">◀</div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding-bottom:4px;">
+          <div class="nav-section-label">Workspace</div>
+          <div class="nav-item active">
+            <div class="nav-item-icon">💬</div>
+            <span class="nav-item-label">Chat</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">📋</div>
+            <span class="nav-item-label">Issues</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">📚</div>
+            <span class="nav-item-label">Knowledge</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">🕸️</div>
+            <span class="nav-item-label">Codegraph</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">🕐</div>
+            <span class="nav-item-label">Timeline</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">🔗</div>
+            <span class="nav-item-label">GitHub</span>
+          </div>
+          <div class="nav-section-label">System</div>
+          <div class="nav-item">
+            <div class="nav-item-icon">🔀</div>
+            <span class="nav-item-label">Router</span>
+          </div>
+          <div class="nav-item">
+            <div class="nav-item-icon">📡</div>
+            <span class="nav-item-label">Providers</span>
+          </div>
+        </div>
+        <div class="nav-footer">
+          <button class="nav-new-chat">
+            <span style="font-size:14px;">+</span> New Chat
+          </button>
+        </div>
+      </div>
+      <div class="main-content">
+        <span>Content area</span>
+      </div>
+    </div>
+    <div class="layout-annotation">
+      <div class="ann-block highlight" style="max-width:220px;flex:none;width:220px;">Side Nav (220px)</div>
+      <div class="ann-block" style="flex:1;">Main Content</div>
+    </div>
+  </div>
+
+  <!-- COLLAPSED NAV (icon rail) -->
+  <div class="demo-box">
+    <div class="demo-title">Collapsed — Icon Rail <span class="badge">52px</span></div>
+    <div class="app-shell">
+      <div class="side-nav-collapsed">
+        <div class="rail-logo">A</div>
+        <div class="rail-expand-btn" title="Mở rộng">▶</div>
+        <div class="rail-divider"></div>
+        <div class="rail-item active" title="Chat">💬</div>
+        <div class="rail-item" title="Issues">📋</div>
+        <div class="rail-item" title="Knowledge">📚</div>
+        <div class="rail-item" title="Codegraph">🕸️</div>
+        <div class="rail-item" title="Timeline">🕐</div>
+        <div class="rail-item" title="GitHub">🔗</div>
+        <div class="rail-divider"></div>
+        <div class="rail-item" title="Router">🔀</div>
+        <div class="rail-item" title="Providers">📡</div>
+        <div style="margin-top:auto;"></div>
+        <div class="rail-item" title="Settings">⚙️</div>
+      </div>
+      <div class="main-content">
+        <span>Content area</span>
+      </div>
+    </div>
+    <div class="layout-annotation">
+      <div class="ann-block highlight" style="max-width:52px;flex:none;width:52px;">Rail</div>
+      <div class="ann-block" style="flex:1;">Main Content (rộng hơn)</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════ ROW 2: CHAT MODE (EXPANDED NAV) ════ -->
+<div class="section-label" style="margin-bottom:10px; margin-top:8px;">Chat Mode — Expanded Nav + Pipeline Inline + Animation</div>
+<div class="demo-box" style="max-width:100%;">
+  <div class="demo-title">Chat đang chạy với Pipeline <span class="badge">Live animation</span></div>
+  <div class="app-shell" style="height:380px;">
+
+    <!-- Side Nav (expanded) -->
+    <div class="side-nav-expanded">
+      <div class="nav-header">
+        <div class="nav-logo">A</div>
+        <span class="nav-brand">Argo</span>
+        <div class="nav-collapse-btn">◀</div>
+      </div>
+      <div style="flex:1; overflow-y:auto; padding-bottom:4px;">
+        <div class="nav-section-label">Workspace</div>
+        <div class="nav-item active">
+          <div class="nav-item-icon">💬</div>
+          <span class="nav-item-label">Chat</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-item-icon">📋</div>
+          <span class="nav-item-label">Issues</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-item-icon">📚</div>
+          <span class="nav-item-label">Knowledge</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-item-icon">🕸️</div>
+          <span class="nav-item-label">Codegraph</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-item-icon">🕐</div>
+          <span class="nav-item-label">Timeline</span>
+        </div>
+      </div>
+      <div class="nav-footer">
+        <button class="nav-new-chat"><span style="font-size:14px;">+</span> New Chat</button>
+      </div>
+    </div>
+
+    <!-- Chat History Sidebar -->
+    <div class="chat-history">
+      <div class="ch-header">
+        <span class="ch-title">Conversations</span>
+        <div class="ch-new-btn">+</div>
+      </div>
+      <div style="flex:1; overflow-y:auto;">
+        <div class="ch-group-label">Hôm nay</div>
+        <div class="ch-item active">
+          <div class="ch-item-title">Build auth system</div>
+          <div class="ch-item-meta">● đang chạy</div>
+        </div>
+        <div class="ch-item">
+          <div class="ch-item-title">Fix pipeline runner</div>
+          <div class="ch-item-meta">2 giờ trước</div>
+        </div>
+        <div class="ch-item">
+          <div class="ch-item-title">Design DB schema</div>
+          <div class="ch-item-meta">5 giờ trước</div>
+        </div>
+        <div class="ch-group-label">Hôm qua</div>
+        <div class="ch-item">
+          <div class="ch-item-title">API endpoint design</div>
+          <div class="ch-item-meta">Hôm qua</div>
+        </div>
+        <div class="ch-item">
+          <div class="ch-item-title">React component refactor</div>
+          <div class="ch-item-meta">Hôm qua</div>
+        </div>
+        <div class="ch-item">
+          <div class="ch-item-title">Docker compose setup</div>
+          <div class="ch-item-meta">Hôm qua</div>
+        </div>
+        <div class="ch-group-label">7 ngày trước</div>
+        <div class="ch-item">
+          <div class="ch-item-title">Celery worker config</div>
+          <div class="ch-item-meta">3 ngày trước</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Main -->
+    <div class="chat-main">
+      <div class="chat-messages">
+
+        <!-- User message -->
+        <div class="msg-user">
+          Build me a JWT auth system with refresh tokens and role-based access control
+        </div>
+
+        <!-- Assistant message with pipeline inline -->
+        <div class="msg-assistant">
+          <div class="msg-avatar"></div>
+          <div class="msg-bubble">
+            <div style="font-size:11px; color:#ccc; margin-bottom:6px; line-height:1.5;">
+              Được rồi, tôi sẽ thiết kế hệ thống auth đầy đủ với JWT + refresh tokens.
+            </div>
+
+            <!-- Pipeline inline block -->
+            <div class="pipeline-block">
+              <div class="pipeline-label">⚡ Pipeline đang chạy</div>
+              <div class="pipeline-steps">
+                <div class="pipeline-step">
+                  <div class="step-dot done"></div>
+                  <span class="step-name done">Planner</span>
+                  <span class="step-time">1.2s</span>
+                </div>
+                <div class="pipeline-step">
+                  <div class="step-dot running"></div>
+                  <span class="step-name running">Engineer</span>
+                  <span class="step-time">đang viết code...</span>
+                </div>
+                <div class="pipeline-step">
+                  <div class="step-dot pending"></div>
+                  <span class="step-name">Cost Estimator</span>
+                </div>
+                <div class="pipeline-step">
+                  <div class="step-dot pending"></div>
+                  <span class="step-name">Writer</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tool use indicator -->
+            <div class="tool-block">
+              <div class="tool-spinner"></div>
+              <span>Đang tạo file <code style="color:#00d4ff;">backend/app/core/security.py</code></span>
+            </div>
+
+            <!-- Typing dots (streaming) -->
+            <div class="typing-indicator" style="margin-top:6px;">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Chat Input -->
+      <div class="chat-input-area">
+        <div class="chat-input-box">
+          <span class="input-placeholder">Nhắn tin với Argo...</span>
+          <div class="input-btn" title="Thêm file">📎</div>
+          <div class="input-btn" title="Chọn model">⚡</div>
+          <div class="input-btn send" title="Gửi">↑</div>
+        </div>
+        <div style="margin-top:5px; font-size:9px; color:#333; text-align:center;">
+          Sonnet 4.6 · Workspace: my-project · claude auth ●
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="layout-annotation">
+    <div class="ann-block highlight" style="max-width:220px;flex:none;width:220px;">Side Nav (collapse →)</div>
+    <div class="ann-block highlight" style="max-width:200px;flex:none;width:200px;">Chat History (chỉ trong Chat tab)</div>
+    <div class="ann-block" style="flex:1;">Chat + Pipeline inline + Animations</div>
+  </div>
+</div>
+
+<div style="margin-top:20px; padding:14px 16px; background:#0a100a; border:1px solid #00ff9d15; border-radius:8px; font-size:12px; color:#777; line-height:1.8;">
+  <strong style="color:#00ff9d; font-size:11px;">Animation details:</strong>
+  &nbsp;Typing dots (bounce) · Pipeline step dot pulse · Tool-use spinner · Step completion flash từ running → done
+</div>
+
+</body>
+</html>

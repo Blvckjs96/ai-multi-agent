@@ -27,10 +27,22 @@ dependencies = [
     "fastapi-pagination>=0.12.31",
     "celery[redis]>=5.6.0",
     "flower>=2.0.0",
-    "pydantic-ai-slim[anthropic,duckduckgo,web-fetch]>=1.80.0",
+    "pydantic-ai-slim[anthropic,duckduckgo,web-fetch,openai]>=1.80.0",
     "click>=8.1.0",
     "tabulate>=0.9.0",
     "tqdm>=4.66.0",
+    "duckduckgo-search>=8.1.1",
+    "urllib3>=2.7.0",
+    "slowapi>=0.1.9",
+    "fastmcp>=2.0",
+    "httpx>=0.28.0",
+    "arq>=0.26.0",
+    "pgvector>=0.3.0",
+    "openai>=1.0.0",
+    "minio>=7.0.0",
+    "loguru>=0.7.3",
+    "rank-bm25>=0.2.2",
+    "apscheduler>=3.11.2",
 ]
 
 [project.optional-dependencies]
@@ -78,6 +90,10 @@ ignore = [
     "RUF012", # mutable class attribute without ClassVar (used in parser base class)
     "RUF059", # unpacked variable never used (CLI destructuring pattern)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# EN dashes in AI prompt strings are intentional typographic content, not bugs
+"app/agents/pipeline/*.py" = ["RUF001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "cli"]
@@ -138,3 +154,13 @@ exclude_lines = [
 [tool.fastapi-fullstack]
 generator_version = "0.2.6"
 generated_at = "2026-05-07T02:37:34.145945+00:00"
+
+[dependency-groups]
+dev = [
+    "anyio>=4.13.0",
+    "bandit>=1.9.4",
+    "httpx>=0.28.1",
+    "pip-audit>=2.10.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+]

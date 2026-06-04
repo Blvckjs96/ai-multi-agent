@@ -1,4 +1,30 @@
-.PHONY: install format lint test run clean help db-init
+.PHONY: install format lint test run clean help db-init argo-dev argo-infra
+
+# === Argo Desktop Dev ===
+# Argo wraps the claude CLI via subprocess — the backend must run on the HOST
+# (not inside Docker) so it can spawn the claude binary from the user's PATH.
+#
+# This target starts DB/Redis/Celery/Flower in Docker (infra only, no backend
+# container) and runs FastAPI locally so claude CLI access works correctly.
+argo-dev: argo-infra
+	@echo ""
+	@echo "Waiting for database to be ready..."
+	@until docker exec ai_multi_agent_db pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+	@echo "Applying migrations..."
+	uv run --directory backend ai_multi_agent db upgrade
+	@echo ""
+	@echo "Starting FastAPI backend on host (port 8001)..."
+	@echo "Frontend Vite proxy will connect to http://127.0.0.1:8001"
+	@echo ""
+	uv run --directory backend ai_multi_agent server run --port 8001 --reload
+
+argo-infra:
+	@echo "Building backend image (needed for Celery workers)..."
+	docker compose build app
+	docker compose up -d db redis celery_worker celery_beat flower
+	@echo ""
+	@echo "Infra services running (DB port 5434, Redis, Celery, Flower)."
+	@echo "Backend NOT started in Docker — run 'make argo-dev' to start it locally."
 
 # === Quick Start (one command to rule them all) ===
 quickstart: install docker-up
@@ -156,10 +182,10 @@ docker-prod-build:
 
 # === Docker: Individual Services ===
 docker-db:
-	docker-compose up -d db
+	docker compose up -d db
 	@echo ""
-	@echo "✅ PostgreSQL started on port 5432"
-	@echo "   Connection: postgresql://postgres:postgres@localhost:5432/ai_multi_agent"
+	@echo "✅ PostgreSQL started on port 5434"
+	@echo "   Connection: postgresql://postgres:postgres@localhost:5434/ai_multi_agent"
 
 docker-db-stop:
 	docker-compose stop db
@@ -185,6 +211,10 @@ help:
 	@echo ""
 	@echo "ai_multi_agent - Available Commands"
 	@echo "======================================"
+	@echo ""
+	@echo "Argo Desktop:"
+	@echo "  make argo-dev      Start infra in Docker + FastAPI on host (claude CLI access)"
+	@echo "  make argo-infra    Start only DB/Redis/Celery/Flower in Docker"
 	@echo ""
 	@echo "Quick Start:"
 	@echo "  make quickstart    Install + start all services + setup DB"

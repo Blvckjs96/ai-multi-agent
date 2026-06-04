@@ -4,6 +4,12 @@ These tests ensure that:
 1. All migrations can be applied (upgrade head)
 2. All migrations can be rolled back (downgrade base)
 3. The upgrade/downgrade cycle is idempotent
+
+NOTE: Migration 0005 requires the pgvector PostgreSQL extension.
+If the local PostgreSQL does not have pgvector installed, these tests
+are automatically skipped. In production/CI, pgvector is available via
+Docker (ankane/pgvector). Install locally with:
+  brew install pgvector   # macOS
 """
 
 import subprocess
@@ -12,6 +18,32 @@ import sys
 import pytest
 
 
+def _pgvector_available() -> bool:
+    """Return True if the local PostgreSQL has pgvector installed."""
+    result = subprocess.run(
+        [
+            sys.executable, "-c",
+            (
+                "import psycopg2, os; "
+                "c = psycopg2.connect(os.environ.get('DATABASE_URL', 'postgresql://localhost/argo_test')); "
+                "cur = c.cursor(); "
+                "cur.execute(\"SELECT 1 FROM pg_available_extensions WHERE name = 'vector'\"); "
+                "print(bool(cur.fetchone()))"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and "True" in result.stdout
+
+
+_PGVECTOR_SKIP = pytest.mark.skipif(
+    not _pgvector_available(),
+    reason="pgvector extension not installed on local PostgreSQL — skipped (use Docker for full tests)",
+)
+
+
+@_PGVECTOR_SKIP
 class TestMigrations:
     """Test Alembic migration integrity."""
 

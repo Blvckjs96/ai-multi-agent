@@ -4,6 +4,7 @@ These handlers convert domain exceptions to proper HTTP responses.
 """
 
 import logging
+from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -11,6 +12,17 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
+
+
+def _make_serializable(obj: object) -> object:
+    """Recursively convert non-JSON-serializable types (e.g. UUID) to strings."""
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, dict):
+        return {k: _make_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_make_serializable(v) for v in obj]
+    return obj
 
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
@@ -42,7 +54,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             "error": {
                 "code": exc.code,
                 "message": exc.message,
-                "details": exc.details or None,
+                "details": _make_serializable(exc.details) if exc.details else None,
             }
         },
         headers=headers,

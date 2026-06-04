@@ -38,9 +38,16 @@ celery_app.conf.beat_schedule = {
         "schedule": 60.0,  # Every 60 seconds
         "args": ("periodic",),
     },
-    # Example with crontab (runs at 00:00 every day)
-    # "daily-cleanup": {
-    #     "task": "app.worker.tasks.examples.cleanup_task",
-    #     "schedule": crontab(hour=0, minute=0),
-    # },
+    # RAG auto-fetch — every 20 minutes (inspired by OpenHuman's sync cadence)
+    "rag-sync-every-20-minutes": {
+        "task": "app.worker.tasks.rag_tasks.sync_rag_sources",
+        "schedule": 1200.0,  # 20 minutes
+    },
+    # Memory consolidation — nightly at 3am UTC (21600s from midnight offset is
+    # handled by crontab below when using django-celery-beat; for plain beat we
+    # run every 24h and accept a floating start time on first deploy).
+    "memory-consolidate-daily": {
+        "task": "app.worker.tasks.memory_tasks.consolidate_memory",
+        "schedule": 86400.0,  # 24 hours
+    },
 }

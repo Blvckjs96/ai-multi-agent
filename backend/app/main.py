@@ -9,6 +9,12 @@ logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 from app.api.exception_handlers import register_exception_handlers
 from app.api.router import api_router
@@ -52,6 +58,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
     from app.db.session import close_db
 
     await close_db()
+    from app.services.codegraph_service import codegraph_service
+
+    await codegraph_service.stop_all()
 
 
 # Environments where API docs should be visible
@@ -131,6 +140,11 @@ A FastAPI project
         },
         lifespan=lifespan,
     )
+    # Rate limiting (slowapi)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
     # Logfire instrumentation
     instrument_app(app)
 
@@ -167,6 +181,11 @@ A FastAPI project
 
     # Include API router
     app.include_router(api_router, prefix=settings.API_V1_STR)
+
+    # Mount Chiron MCP server (ASGI sub-application)
+    from app.chiron.mcp.server import create_chiron_app
+
+    app.mount("/chiron/mcp", create_chiron_app())
 
     # Pagination
     add_pagination(app)

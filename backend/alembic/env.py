@@ -14,6 +14,8 @@ from app.db.models.user import User  # noqa: F401
 from app.db.models.conversation import Conversation, Message, ToolCall  # noqa: F401
 from app.db.models.message_rating import MessageRating  # noqa: F401
 from app.db.models.chat_file import ChatFile  # noqa: F401
+from app.db.models.rag_document import RagDocument  # noqa: F401
+from app.db.models.sync_source import SyncSource  # noqa: F401
 
 config = context.config
 

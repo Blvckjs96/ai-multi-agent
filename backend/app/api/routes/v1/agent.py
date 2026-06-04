@@ -4,7 +4,11 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 from pydantic_ai import (
     Agent,
     FinalResultEvent,
@@ -25,7 +29,7 @@ from pydantic_ai.messages import (
 from sqlalchemy import select
 
 from app.agents.assistant import Deps, get_agent
-from app.api.deps import get_conversation_service, get_current_user_ws
+from app.api.deps import ValidAPIKey, get_conversation_service, get_current_user_ws
 from app.db.models.user import User
 from app.db.session import get_db_context
 from app.schemas.conversation import (
@@ -42,7 +46,8 @@ router = APIRouter()
 
 
 @router.get("/agent/models")
-async def list_models() -> dict[str, Any]:
+@limiter.limit("20/minute")
+async def list_models(request: Request, api_key: ValidAPIKey) -> dict[str, Any]:
     """Return available LLM models and the current default."""
     from app.core.config import settings
 

@@ -1,12 +1,18 @@
 """Writer agent — synthesises all prior outputs into a human-readable spec."""
 
+import asyncio
+import logging
+
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
+from app.agents import skill_library
 from app.agents.pipeline.cost_estimator import CostEstimatorOutput
 from app.agents.pipeline.engineer import EngineerOutput
 from app.agents.pipeline.model_router import get_model_for_agent
 from app.agents.pipeline.planner import PlannerOutput
+
+logger = logging.getLogger(__name__)
 
 WRITER_SYSTEM_PROMPT = """You are a senior technical writer who produces clear,
 professional software project specifications.
@@ -63,23 +69,33 @@ async def run_writer(
         Formatted Markdown specification document as a string.
     """
     model, _ = await get_model_for_agent("writer")
+
+    # Writer always receives all writing-craft skills — no keyword filter needed.
+    writing_guidance = await asyncio.get_event_loop().run_in_executor(
+        None, skill_library.get_guidance, "", "writer"
+    )
+
+    system_prompt = WRITER_SYSTEM_PROMPT
+    if writing_guidance:
+        system_prompt = (
+            f"{WRITER_SYSTEM_PROMPT}\n\n"
+            "## Technical Writing Skill Guidance\n"
+            "Apply these writing craft principles when composing the specification document.\n\n"
+            f"{writing_guidance}"
+        )
+        logger.debug("Writer skills injected (%d chars)", len(writing_guidance))
+
     agent = Agent[None, str](
         model=model,
         model_settings=ModelSettings(temperature=0.5),
-        system_prompt=WRITER_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         output_type=str,
     )
 
-    phases_text = "\n".join(
-        f"- **{p.name}** ({p.duration}): {p.goal}" for p in plan.phases
-    )
+    phases_text = "\n".join(f"- **{p.name}** ({p.duration}): {p.goal}" for p in plan.phases)
     tech_text = "\n".join(f"- {t}" for t in architecture.tech_stack)
-    decisions_text = "\n".join(
-        f"{i + 1}. {d}" for i, d in enumerate(architecture.key_decisions)
-    )
-    breakdown_text = "\n".join(
-        f"| {item.item} | ${item.cost:,} |" for item in cost.breakdown
-    )
+    decisions_text = "\n".join(f"{i + 1}. {d}" for i, d in enumerate(architecture.key_decisions))
+    breakdown_text = "\n".join(f"| {item.item} | ${item.cost:,} |" for item in cost.breakdown)
 
     prompt = (
         f"Project description:\n{description}\n\n"

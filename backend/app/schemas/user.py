@@ -48,6 +48,7 @@ class UserRead(UserBase, TimestampSchema):
     id: UUID
     role: UserRole = UserRole.USER
     avatar_url: str | None = None
+    mcp_token: str | None = None
 
 
 class UserInDB(UserRead):

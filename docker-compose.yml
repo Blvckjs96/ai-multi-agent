@@ -1,6 +1,14 @@
 
 # Backend development configuration
 # Usage: docker-compose up -d
+#
+# ARGO DEV WORKFLOW NOTE:
+# The 'app' service (Docker backend) is NOT used in the argo-dev workflow.
+# Argo spawns the claude CLI via subprocess — that macOS binary cannot run
+# inside a Linux Docker container, so FastAPI must run on the host.
+# Use 'make argo-dev' which runs infra in Docker + FastAPI locally.
+# The 'app' service is in the 'full' profile — start it only for non-Argo testing:
+#   docker compose --profile full up -d
 
 services:
   app:
@@ -9,11 +17,10 @@ services:
       dockerfile: Dockerfile
     image: ai_multi_agent_backend:dev
     container_name: ai_multi_agent_backend
+    profiles: ["full"]
     ports:
-      - "8000:8000"
+      - "8007:8000"
     volumes:
-      - ./backend/app:/app/app:ro
-      - ./backend/cli:/app/cli:ro
       - media_data:/app/media
     env_file:
       - ./backend/.env
@@ -21,9 +28,11 @@ services:
       - DEBUG=true
       - ENVIRONMENT=local
       - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONDONTWRITEBYTECODE=1
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - backend
@@ -35,7 +44,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: ai_multi_agent_db
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -43,9 +52,9 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-ai_multi_agent}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Port exposed only for local development - remove in production
+    # Port 5434: avoids conflict with EDB PostgreSQL (5432) and Homebrew PostgreSQL (5433)
     ports:
-      - "5432:5432"
+      - "5434:5432"
     networks:
       - backend
     healthcheck:
@@ -53,6 +62,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Give PostgreSQL time to flush WAL and shutdown cleanly before Docker sends SIGKILL.
+    # Without this, every restart triggers WAL recovery ("not properly shut down").
+    stop_grace_period: 30s
     restart: unless-stopped
 
   redis:
@@ -76,22 +88,29 @@ services:
     image: ai_multi_agent_backend:dev
     container_name: ai_multi_agent_celery_worker
     volumes:
-      - ./backend/app:/app/app:ro
       - media_data:/app/media
-    command: celery -A app.worker.celery_app worker --loglevel=debug
+    # -E enables Celery events so Flower can display worker stats and task history
+    command: celery -A app.worker.celery_app worker --loglevel=info -E
     env_file:
       - ./backend/.env
     environment:
       - DEBUG=true
       - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONDONTWRITEBYTECODE=1
+    healthcheck:
+      # pgrep is reliable regardless of worker hostname; inspect ping -d requires exact hostname match
+      test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping --timeout 5 2>/dev/null | grep -q 'pong' || pgrep -f 'celery.*worker' > /dev/null"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
       db:
@@ -101,9 +120,7 @@ services:
   celery_beat:
     image: ai_multi_agent_backend:dev
     container_name: ai_multi_agent_celery_beat
-    volumes:
-      - ./backend/app:/app/app:ro
-    command: celery -A app.worker.celery_app beat --loglevel=debug
+    command: celery -A app.worker.celery_app beat --loglevel=info
     env_file:
       - ./backend/.env
     environment:
@@ -111,11 +128,16 @@ services:
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONDONTWRITEBYTECODE=1
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -133,11 +155,15 @@ services:
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:5555/healthcheck')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     networks:
       - backend
     depends_on:
-      app:
-        condition: service_started
       redis:
         condition: service_healthy
     restart: unless-stopped

@@ -51,6 +51,22 @@ async def update_current_user(
     return user
 
 
+@router.post("/me/mcp-token", response_model=UserRead)
+async def rotate_mcp_token(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: DBSession,
+) -> Any:
+    """Generate or rotate the Chiron MCP token for the current user.
+
+    The returned token must be passed as the X-Mcp-Token header when configuring
+    the Chiron MCP server in Claude CLI sessions.
+    """
+    current_user.mcp_token = User.generate_mcp_token()
+    await db.flush()
+    await db.refresh(current_user)
+    return current_user
+
+
 @router.post("/me/avatar", response_model=UserRead)
 async def upload_avatar(
     file: UploadFile = File(...),

@@ -77,9 +77,50 @@ def get_file_upload_service(db: DBSession) -> FileUploadService:
 
 
 FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
+
+from app.services.note import NoteService
+
+
+def get_note_service(db: DBSession) -> NoteService:
+    """Create NoteService instance with database session."""
+    return NoteService(db)
+
+
+NoteSvc = Annotated[NoteService, Depends(get_note_service)]
+
+from app.services.tool import ToolService
+
+
+def get_tool_service(db: DBSession) -> ToolService:
+    """Create ToolService instance with database session."""
+    return ToolService(db)
+
+
+ToolSvc = Annotated[ToolService, Depends(get_tool_service)]
+
+from app.services.workspace_skill import WorkspaceSkillService
+
+
+def get_workspace_skill_service(db: DBSession) -> WorkspaceSkillService:
+    """Create WorkspaceSkillService instance with database session."""
+    return WorkspaceSkillService(db)
+
+
+WorkspaceSkillSvc = Annotated[WorkspaceSkillService, Depends(get_workspace_skill_service)]
+
+from app.services.prompt_svc import PromptService
+
+
+def get_prompt_service(db: DBSession) -> PromptService:
+    """Create PromptService instance with database session."""
+    return PromptService(db)
+
+
+PromptSvc = Annotated[PromptService, Depends(get_prompt_service)]
+
 # === Authentication Dependencies ===
 
-from app.core.exceptions import AuthenticationError, AuthorizationError
+from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 from app.db.models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
@@ -112,7 +153,11 @@ async def get_current_user(
     if user_id is None:
         raise AuthenticationError(message="Invalid token payload")
 
-    user = await user_service.get_by_id(UUID(user_id))
+    try:
+        user = await user_service.get_by_id(UUID(user_id))
+    except NotFoundError:
+        raise AuthenticationError(message="Invalid or expired token")
+
     if not user.is_active:
         raise AuthenticationError(message="User account is disabled")
 
@@ -175,12 +220,33 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
 CurrentAdmin = Annotated[User, Depends(RoleChecker(UserRole.ADMIN))]
 
+# Optional — returns None if no valid token is present (for endpoints that work with or without auth)
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
+)
+
+
+async def get_optional_current_user(
+    token: Annotated[str | None, Depends(oauth2_scheme_optional)],
+    user_service: UserSvc,
+) -> User | None:
+    """Return the authenticated user or None (no error if unauthenticated)."""
+    if not token:
+        return None
+    try:
+        return await get_current_user(token, user_service)  # type: ignore[arg-type]
+    except (AuthenticationError, AuthorizationError):
+        return None
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]
+
 
 # WebSocket authentication dependency
 from fastapi import WebSocket, Cookie
 
 
-_WS_TOKEN_PROTOCOL_PREFIX = "access_token."
+_WS_TOKEN_PROTOCOL_PREFIX = "access_token."  # nosec B105
 
 
 def _extract_ws_auth(websocket: WebSocket) -> tuple[str | None, str | None]:
@@ -290,3 +356,35 @@ async def verify_api_key(
 
 
 ValidAPIKey = Annotated[str, Depends(verify_api_key)]
+
+
+def require_permission(permission: str):
+    """Return a FastAPI Depends() that verifies authentication.
+
+    Compatibility shim for Argon routes. Argo's desktop mode grants all
+    permissions to any authenticated user; `permission` is not enforced.
+    """
+    return Depends(get_current_user)
+
+
+def permission_checker(permission_key: str):
+    """
+    FastAPI dependency factory for group-based permission checks.
+    Raises AuthorizationError (403) if the authenticated user lacks the permission.
+
+    Usage:
+        @router.post("/kb", dependencies=[Depends(permission_checker("workspace.knowledge.create"))])
+
+    Permission keys use dot notation matching DEFAULT_USER_PERMISSIONS structure.
+    """
+    from app.core.permissions import has_permission as _has_permission
+
+    async def _check(user: CurrentUser, db: DBSession) -> None:
+        ok = await _has_permission(str(user.id), permission_key, db)
+        if not ok:
+            raise AuthorizationError(
+                message=f"Permission '{permission_key}' required",
+                details={"permission": permission_key},
+            )
+
+    return Depends(_check)

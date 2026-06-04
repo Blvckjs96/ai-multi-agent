@@ -1,11 +1,5 @@
-/**
- * SpecOutput — renders the final Markdown spec with a copy button.
- *
- * Props:
- *   spec — raw markdown string
- */
-
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import Markdown from 'react-markdown'
 
 export function SpecOutput({ spec }) {
@@ -17,7 +11,7 @@ export function SpecOutput({ spec }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Clipboard unavailable — silently ignore
+      // Clipboard unavailable
     }
   }
 
@@ -26,7 +20,7 @@ export function SpecOutput({ spec }) {
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-accent)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
       }}
     >
@@ -36,28 +30,28 @@ export function SpecOutput({ spec }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 18px',
+          padding: '12px 16px',
           borderBottom: '1px solid var(--border)',
-          background: 'rgba(108,99,255,0.05)',
+          background: 'rgba(0,122,255,0.04)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
-              width: '8px',
-              height: '8px',
+              width: '7px',
+              height: '7px',
               borderRadius: '50%',
-              background: 'var(--accent-gradient)',
+              background: 'var(--accent)',
               display: 'inline-block',
             }}
           />
           <span
             style={{
               fontSize: '12px',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
+              fontWeight: 600,
               color: 'var(--text-primary)',
+              letterSpacing: '.05em',
+              textTransform: 'uppercase',
             }}
           >
             Project Specification
@@ -67,32 +61,34 @@ export function SpecOutput({ spec }) {
         <button
           onClick={handleCopy}
           style={{
-            background: copied ? 'var(--success-soft)' : 'rgba(255,255,255,0.06)',
-            border: `1px solid ${copied ? 'rgba(34,197,94,0.2)' : 'var(--border)'}`,
+            background: copied ? 'var(--success-soft)' : 'transparent',
+            border: `1px solid ${copied ? 'rgba(34,197,94,0.22)' : 'var(--border-strong)'}`,
             color: copied ? 'var(--success)' : 'var(--text-secondary)',
             padding: '5px 14px',
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--radius-lg)',
             fontSize: '12px',
             fontWeight: 500,
             cursor: 'pointer',
-            transition: 'all 200ms var(--ease-out)',
+            transition: `all var(--duration-fast)`,
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
           }}
+          onMouseEnter={(e) => {
+            if (!copied) e.currentTarget.style.background = 'var(--bg-hover)'
+          }}
+          onMouseLeave={(e) => {
+            if (!copied) e.currentTarget.style.background = 'transparent'
+          }}
         >
-          {copied ? '✓ Copied' : 'Copy Spec'}
+          {copied ? <><Check size={11} style={{ verticalAlign: 'middle' }} /> Copied</> : 'Copy'}
         </button>
       </div>
 
       {/* Markdown body */}
       <div
         className="spec-content"
-        style={{
-          padding: '20px 24px',
-          maxHeight: '600px',
-          overflowY: 'auto',
-        }}
+        style={{ padding: '20px 24px', maxHeight: '600px', overflowY: 'auto' }}
       >
         <Markdown>{spec}</Markdown>
       </div>
