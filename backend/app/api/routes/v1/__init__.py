@@ -30,6 +30,7 @@ from app.api.routes.v1 import notes
 from app.api.routes.v1 import tools
 from app.api.routes.v1 import workspace_skills
 from app.api.routes.v1 import prompts
+from app.api.routes.v1 import web_search
 
 # Argon knowledge-base modules
 from app.argon.api import (
@@ -140,6 +141,9 @@ v1_router.include_router(workspace_skills.router)
 
 # Prompts (user-defined prompt templates with variable placeholders)
 v1_router.include_router(prompts.router)
+
+# Web search (DuckDuckGo / Brave / SearXNG)
+v1_router.include_router(web_search.router)
 
 # ---------------------------------------------------------------------------
 # Argon — knowledge-base engine (wiki, sources, MRP, skills, RBAC, admin)

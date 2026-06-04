@@ -230,6 +230,14 @@ async def search(
     return {"results": results, "query": body.query}
 
 
+@router.post("/{workspace_id}/hybrid-search")
+async def hybrid_search(
+    workspace_id: UUID, body: SearchRequest, db: DBSession, api_key: ValidAPIKey
+) -> Any:
+    results = await ChironService(db).hybrid_search(workspace_id, body.query, top_k=body.top_k or 8)
+    return {"items": results, "total": len(results)}
+
+
 @router.get("/{workspace_id}/sources", response_model=list[SourceRead])
 async def list_sources(workspace_id: UUID, db: DBSession, api_key: ValidAPIKey) -> Any:
     return await ChironService(db).list_sources(workspace_id)

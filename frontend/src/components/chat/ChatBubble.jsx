@@ -6,6 +6,7 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import { Settings2, ThumbsUp, ThumbsDown } from 'lucide-react'
 import CodeBlock from './CodeBlock'
+import Citations from './Citations'
 
 const styles = {
   row: (role) => ({
@@ -184,7 +185,7 @@ const MARKDOWN_COMPONENTS = {
 }
 
 export function ChatBubble({ message, onFeedback, feedback }) {
-  const { role, type, subtype, text, tool, input, content } = message
+  const { role, type, subtype, text, tool, input, content, sources, webSources } = message
 
   if (type === 'phase_separator') return <PhaseSeparator text={text} />
   if (type === 'tool_use') return <ToolUseBubble tool={tool} input={input} />
@@ -232,6 +233,7 @@ export function ChatBubble({ message, onFeedback, feedback }) {
             >
               {text || ''}
             </ReactMarkdown>
+            <Citations sources={sources} webSources={webSources} />
             {onFeedback && (
               <div className="absolute -bottom-6 right-0 hidden group-hover:flex items-center gap-1">
                 <button

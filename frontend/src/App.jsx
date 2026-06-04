@@ -68,8 +68,8 @@ function ChatPanel({ workspaceId, activeConversationId, onLoadMessages }) {
   }, [activeConversationId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendWithWorkspace = useCallback(
-    (msg) => chat.send(msg, workspaceId, coworkerId, localModel),
-    [chat.send, workspaceId, coworkerId, localModel],
+    (msg) => chat.send(msg, workspaceId, coworkerId, localModel, webSearch),
+    [chat.send, workspaceId, coworkerId, localModel, webSearch],
   )
 
   // Read selected files as text and send as context with the next message

@@ -76,6 +76,18 @@ export function useChat(conversationId = null) {
     })
   }, [])
 
+  const patchLastAssistantSources = useCallback((sources, webSources) => {
+    setMessages((prev) => {
+      const idx = [...prev].reverse().findIndex((m) => m.role === 'assistant' && m.type === 'text')
+      if (idx === -1) return prev
+      const realIdx = prev.length - 1 - idx
+      const patch = {}
+      if (sources?.length) patch.sources = sources
+      if (webSources?.length) patch.webSources = webSources
+      return prev.map((m, i) => (i === realIdx ? { ...m, ...patch } : m))
+    })
+  }, [])
+
   const flushBuffer = useCallback(() => {
     if (assistantBufRef.current) {
       if (streamingMsgRef.current === null) {
@@ -200,6 +212,10 @@ export function useChat(conversationId = null) {
               })
               // Persist assistant reply
               if (finishedText) saveMessage('assistant', finishedText)
+              // Attach KB and web sources to the last assistant message
+              if (evt.sources?.length || evt.web_sources?.length) {
+                patchLastAssistantSources(evt.sources, evt.web_sources)
+              }
 
               if (phase === 'plan') setStatus(STATUS.AWAITING_CONFIRM)
               else                  setStatus(STATUS.DONE)
@@ -225,13 +241,13 @@ export function useChat(conversationId = null) {
         }
       }
     },
-    [appendMsg, flushBuffer, patchLastAssistant, saveMessage],
+    [appendMsg, flushBuffer, patchLastAssistant, patchLastAssistantSources, saveMessage],
   )
 
   // ── Public API ────────────────────────────────────────────────────────────
 
   const send = useCallback(
-    async (message, workspaceId, coworkerId = null, userModel = null) => {
+    async (message, workspaceId, coworkerId = null, userModel = null, webSearch = false) => {
       if (checkPromptInjection(message)) {
         setError('Message blocked: potential prompt injection detected.')
         setStatus(STATUS.ERROR)
@@ -242,7 +258,8 @@ export function useChat(conversationId = null) {
       const body = { message, session_id: sessionId, permission_mode: 'plan' }
       if (workspaceId) body.workspace_id = workspaceId
       if (coworkerId)  body.coworker_id  = coworkerId
-      if (userModel)   body.user_model   = userModel   // ArgoHarness local model override
+      if (userModel)   body.user_model   = userModel
+      if (webSearch)   body.web_search   = true
       await consumeStream(`${API_BASE}/stream`, body, 'plan')
     },
     [appendMsg, consumeStream, saveMessage, sessionId],

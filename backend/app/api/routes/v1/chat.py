@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator
 from typing import Any, Literal
 from uuid import UUID
@@ -84,6 +85,7 @@ class ChatStreamRequest(BaseModel):
     permission_mode: Literal["plan", "auto"] = "plan"
     coworker_id: UUID | None = None
     user_model: str | None = None   # ArgoHarness: user-selected local model override
+    web_search: bool = False         # Phase 3: trigger web search injection
 
 
 class ChatConfirmRequest(BaseModel):
@@ -186,8 +188,42 @@ async def _stream_response(
     session_assistant_text: list[str] = []
     obs_count = 0   # STM tool_use observation counter for this turn
     got_result = False
+    kb_sources: list[dict[str, Any]] = []
+    web_sources: list[dict[str, Any]] = []
+
     try:
-        triage = await _triage.analyze(body.message)
+        # Phase 3: [kb: name] tag injection
+        enriched_message = body.message
+        if body.message and body.workspace_id and db is not None:
+            enriched_message, kb_sources = await _inject_knowledge(
+                body.message, body.workspace_id, db
+            )
+            if kb_sources:
+                logger.info(
+                    "KB injection: %d sources for workspace %s", len(kb_sources), body.workspace_id
+                )
+
+        # Phase 3: web search injection
+        if body.web_search and body.message:
+            try:
+                from app.services.web_search import search as _web_search
+
+                web_sources = await _web_search(body.message, limit=5)
+                if web_sources:
+                    web_ctx = "\n".join(
+                        f"- [{r['title']}]({r['url']}): {r['snippet']}"
+                        for r in web_sources
+                    )
+                    web_block = f"Web search results for '{body.message}':\n{web_ctx}"
+                    if tier0_context:
+                        tier0_context = web_block + "\n\n" + tier0_context
+                    else:
+                        tier0_context = web_block
+                    logger.info("Web search: %d results injected", len(web_sources))
+            except Exception as exc:
+                logger.debug("Web search injection failed (non-fatal): %s", exc)
+
+        triage = await _triage.analyze(enriched_message)
 
         # Auto-downgrade to permission_mode=auto for read-only triage results.
         # Queries like "who are you?" or "explain X" never write files, so the
@@ -306,7 +342,7 @@ async def _stream_response(
                 logger.debug("Injected %d chars local context for Ollama session", len(local_ctx))
 
         async for event in route_session(
-            body.message,
+            enriched_message,
             triage,
             session_id=body.session_id,
             permission_mode=effective_permission_mode,
@@ -365,6 +401,12 @@ async def _stream_response(
 
             payload = _normalize_event(event, current_session_id)
             if payload is not None:
+                # Phase 3: attach KB and web sources to the result event
+                if event.type == "result":
+                    if kb_sources:
+                        payload["sources"] = kb_sources
+                    if web_sources:
+                        payload["web_sources"] = web_sources
                 yield _sse(payload)
 
             if event.type == "result":
@@ -560,6 +602,47 @@ async def _maybe_draft_wiki(
                 break
     except Exception as exc:
         logger.debug("Wiki auto-draft background task failed (non-fatal): %s", exc)
+
+
+_KB_TAG_RE = re.compile(r"\[kb:\s*([^\]]+)\]", re.IGNORECASE)
+
+
+async def _inject_knowledge(
+    message: str, workspace_id: UUID | None, db: Any
+) -> tuple[str, list[dict[str, Any]]]:
+    """Extract [kb: name] tags, fetch chunks via hybrid search, return (enriched_msg, sources)."""
+    tags = _KB_TAG_RE.findall(message)
+    if not tags or not workspace_id:
+        return message, []
+
+    from app.services.chiron import ChironService
+
+    clean_message = _KB_TAG_RE.sub("", message).strip()
+    all_sources: list[dict[str, Any]] = []
+    context_blocks: list[str] = []
+
+    chiron = ChironService(db)
+    for tag_name in tags:
+        try:
+            results = await chiron.hybrid_search(workspace_id, clean_message, top_k=3)
+            for r in results:
+                context_blocks.append(f"[Source: {r.get('source_name', tag_name)}]\n{r['chunk']}")
+                all_sources.append(
+                    {
+                        "name": r.get("source_name", tag_name),
+                        "chunk": r["chunk"][:200],
+                        "score": r["score"],
+                    }
+                )
+        except Exception as exc:
+            logger.debug("[kb: %s] hybrid search failed (non-fatal): %s", tag_name, exc)
+
+    if not context_blocks:
+        return clean_message, []
+
+    context_str = "\n\n".join(context_blocks)
+    enriched = f"Context from knowledge base:\n{context_str}\n\n---\n\nUser question: {clean_message}"
+    return enriched, all_sources
 
 
 def _extract_concepts(text: str) -> list[str]:

@@ -294,6 +294,70 @@ class ChironService:
 
     # ── Search ───────────────────────────────────────────────────────────────
 
+    async def hybrid_search(
+        self,
+        workspace_id: uuid.UUID,
+        query: str,
+        top_k: int = 8,
+        alpha: float = 0.7,
+    ) -> list[dict[str, Any]]:
+        """Hybrid search: alpha * dense_score + (1-alpha) * bm25_score.
+
+        Returns list of {source_id, source_name, chunk, score, page}.
+        Falls back to TF-IDF when pgvector is unavailable.
+        """
+        from rank_bm25 import BM25Okapi
+
+        dense_results = await self.search(workspace_id, query, top_k=top_k * 2)
+
+        if not dense_results:
+            return []
+
+        corpus = [r.get("content", r.get("summary", "")) for r in dense_results]
+        tokenized = [c.lower().split() for c in corpus]
+        bm25 = BM25Okapi(tokenized)
+        bm25_scores = bm25.get_scores(query.lower().split())
+
+        max_dense = max((r.get("score", 0.0) for r in dense_results), default=1.0) or 1.0
+        max_bm25 = max(bm25_scores, default=1.0) or 1.0
+
+        combined = []
+        for i, r in enumerate(dense_results):
+            hybrid_score = (
+                alpha * (r.get("score", 0.0) / max_dense)
+                + (1 - alpha) * (float(bm25_scores[i]) / max_bm25)
+            )
+            combined.append(
+                {
+                    "source_id": r.get("id", ""),
+                    "source_name": r.get("title", "Unknown"),
+                    "chunk": corpus[i],
+                    "score": round(hybrid_score, 4),
+                    "page": None,
+                }
+            )
+
+        combined.sort(key=lambda x: x["score"], reverse=True)
+        combined = combined[:top_k]
+
+        # Optional cross-encoder reranking (enabled via CHIRON_RERANK=true env var).
+        import os
+
+        if os.getenv("CHIRON_RERANK") == "true":
+            try:
+                from sentence_transformers import CrossEncoder
+
+                model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+                pairs = [[query, r["chunk"]] for r in combined]
+                rerank_scores = model.predict(pairs)
+                for i, r in enumerate(combined):
+                    r["score"] = float(rerank_scores[i])
+                combined.sort(key=lambda x: x["score"], reverse=True)
+            except ImportError:
+                pass
+
+        return combined
+
     async def search(
         self,
         workspace_id: uuid.UUID,
