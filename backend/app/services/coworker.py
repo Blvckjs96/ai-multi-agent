@@ -31,7 +31,16 @@ class CoworkerService:
         return cw
 
     async def create(
-        self, user_id: UUID, *, name: str, role: str, system_prompt: str, model: str = "sonnet"
+        self,
+        user_id: UUID,
+        *,
+        name: str,
+        role: str,
+        system_prompt: str,
+        model: str = "sonnet",
+        knowledge_ids: list[str] | None = None,
+        tool_ids: list[str] | None = None,
+        skill_ids: list[str] | None = None,
     ) -> Coworker:
         cw = Coworker(
             user_id=user_id,
@@ -39,6 +48,9 @@ class CoworkerService:
             role=role,
             system_prompt=system_prompt,
             model=model,
+            knowledge_ids=knowledge_ids or [],
+            tool_ids=tool_ids or [],
+            skill_ids=skill_ids or [],
         )
         self.db.add(cw)
         await self.db.flush()

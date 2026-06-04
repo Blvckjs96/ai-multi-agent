@@ -22,6 +22,9 @@ class CoworkerCreate(BaseModel):
     role: str = Field(min_length=1, max_length=50)
     system_prompt: str = Field(default="")
     model: str = Field(default="sonnet", max_length=50)
+    knowledge_ids: list[str] = Field(default_factory=list)
+    tool_ids: list[str] = Field(default_factory=list)
+    skill_ids: list[str] = Field(default_factory=list)
 
 
 class CoworkerUpdate(BaseModel):
@@ -29,6 +32,9 @@ class CoworkerUpdate(BaseModel):
     role: str | None = Field(default=None, max_length=50)
     system_prompt: str | None = None
     model: str | None = Field(default=None, max_length=50)
+    knowledge_ids: list[str] | None = None
+    tool_ids: list[str] | None = None
+    skill_ids: list[str] | None = None
 
 
 class CoworkerRead(BaseModel):
@@ -37,6 +43,9 @@ class CoworkerRead(BaseModel):
     role: str
     system_prompt: str
     model: str
+    knowledge_ids: list[str] = Field(default_factory=list)
+    tool_ids: list[str] = Field(default_factory=list)
+    skill_ids: list[str] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -57,6 +66,9 @@ async def create_coworker(body: CoworkerCreate, user: CurrentUser, db: DBSession
         role=body.role,
         system_prompt=body.system_prompt,
         model=body.model,
+        knowledge_ids=body.knowledge_ids,
+        tool_ids=body.tool_ids,
+        skill_ids=body.skill_ids,
     )
 
 
