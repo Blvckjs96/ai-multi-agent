@@ -31,6 +31,9 @@ from app.api.routes.v1 import tools
 from app.api.routes.v1 import workspace_skills
 from app.api.routes.v1 import prompts
 from app.api.routes.v1 import web_search
+from app.api.routes.v1 import automations
+from app.api.routes.v1 import analytics
+from app.api.routes.v1 import audio
 
 # Argon knowledge-base modules
 from app.argon.api import (
@@ -144,6 +147,15 @@ v1_router.include_router(prompts.router)
 
 # Web search (DuckDuckGo / Brave / SearXNG)
 v1_router.include_router(web_search.router)
+
+# Automations (APScheduler-backed scheduled AI tasks)
+v1_router.include_router(automations.router)
+
+# Analytics (aggregate stats — no new tables)
+v1_router.include_router(analytics.router)
+
+# Audio STT (Whisper / OpenAI)
+v1_router.include_router(audio.router)
 
 # ---------------------------------------------------------------------------
 # Argon — knowledge-base engine (wiki, sources, MRP, skills, RBAC, admin)
