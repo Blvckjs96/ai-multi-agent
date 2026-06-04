@@ -77,6 +77,17 @@ def get_file_upload_service(db: DBSession) -> FileUploadService:
 
 
 FileUploadSvc = Annotated[FileUploadService, Depends(get_file_upload_service)]
+
+from app.services.note import NoteService
+
+
+def get_note_service(db: DBSession) -> NoteService:
+    """Create NoteService instance with database session."""
+    return NoteService(db)
+
+
+NoteSvc = Annotated[NoteService, Depends(get_note_service)]
+
 # === Authentication Dependencies ===
 
 from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError

@@ -15,7 +15,7 @@ async def get_all(
     stmt = (
         select(Note)
         .where(Note.user_id == user_id)
-        .order_by(Note.pinned.desc(), Note.updated_at.desc())
+        .order_by(Note.pinned.desc(), Note.created_at.desc())
     )
     if workspace_id:
         stmt = stmt.where(Note.workspace_id == workspace_id)
